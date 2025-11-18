@@ -43,6 +43,9 @@ let selectedTicketType = ''; // guarda o tipo de senha digital (Atendimento Gera
 let currentSlide = 0;
 let totalSlides = 0;
 
+// CPFs autorizados a pular a etapa de reconhecimento facial
+const FACIAL_BYPASS_CPFS = ['11103902466', '10352061456'];
+
 
 // Função para buscar agendamentos da API
 // Função para buscar agendamentos da API
@@ -848,119 +851,6 @@ document.getElementById('identify-form')?.addEventListener('submit', async (e) =
 });
 
 
-// Adiciona evento de clique para o botão de identificação
-document.getElementById('identify-btn')?.addEventListener('click', async (e) => {
-  e.preventDefault();
-
-  const cpfInput = document.getElementById('cpf-value');
-  const cpf = cpfInput.value.replace(/\D/g, ''); // Remove formatação do CPF
-
-  if (cpf.length !== 11) {
-    // Mostra mensagem de erro
-    const cpfDisplay = document.getElementById('cpf-display');
-    cpfDisplay.classList.add('shake');
-    setTimeout(() => cpfDisplay.classList.remove('shake'), 500);
-    return;
-  }
-
-  // Inicia o reconhecimento facial diretamente
-  try {
-    // Primeiro, tenta acessar a câmera antes de mostrar o modal
-    try {
-      await iniciarCamera();
-      // Se chegou aqui, a câmera foi acessada com sucesso
-      pararCamera(); // Para a câmera para reiniciá-la no modal
-    } catch (error) {
-      // Se houver erro ao acessar a câmera, não continua
-      console.error('Erro ao acessar a câmera:', error);
-      return; // Sai da função se não conseguir acessar a câmera
-    }
-
-    // Mostra o modal de reconhecimento facial
-    const result = await Swal.fire({
-      title: 'Reconhecimento Facial',
-      html: `
-                <div style="text-align:center;">
-                    <div id="camera-container" style="width:100%;max-width:500px;height:320px;position:relative;background:#000;border-radius:12px;overflow:hidden;margin:0 auto;">
-                        <video id="camera-stream" autoplay playsinline style="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);"></video>
-                    </div>
-                    <p style="margin:15px 0;color:#666;font-size:1.1rem;">Posicione seu rosto dentro do quadro</p>
-                    <div id="recognition-status" style="color:#E88C38;font-weight:500;min-height:24px;"></div>
-                </div>
-            `,
-      showConfirmButton: false,
-      showCancelButton: true,
-      cancelButtonText: 'Cancelar',
-      allowOutsideClick: false,
-      didOpen: async () => {
-        try {
-          const statusElement = document.getElementById('recognition-status');
-          statusElement.textContent = 'Iniciando câmera...';
-
-          // Inicia a câmera para reconhecimento facial
-          await iniciarCamera();
-          statusElement.textContent = 'Analisando rosto...';
-
-          // Simula o reconhecimento facial (substitua por sua lógica real)
-          setTimeout(async () => {
-            // Se o reconhecimento for bem-sucedido, fecha o modal e mostra os agendamentos
-            if (Swal.isVisible()) {
-              // Fecha o modal de reconhecimento
-              Swal.close();
-
-              // Mostra a tela de confirmação de identidade
-              const confirmResult = await Swal.fire({
-                title: 'Confirme sua identidade',
-                html: `
-                                    <div style="text-align:center;">
-                                        <p>Confirme se os dados estão corretos:</p>
-                                        <p><strong>CPF:</strong> ${cpfInput.value}</p>
-                                    </div>
-                                `,
-                showCancelButton: true,
-                confirmButtonText: 'Sim, sou eu',
-                cancelButtonText: 'Não, não sou eu',
-                allowOutsideClick: false,
-                customClass: {
-                  confirmButton: 'swal-confirm-btn',
-                  cancelButton: 'swal-cancel-btn'
-                },
-                buttonsStyling: false
-              });
-
-              if (confirmResult.isConfirmed) {
-                // Mostra a tela de agendamentos após confirmação
-                showScreen('appointments');
-                // Carrega os agendamentos para o CPF informado
-                await renderAppointments(cpf);
-              } else {
-                // Volta para a tela de identificação
-                showScreen('identify');
-              }
-            }
-          }, 3000); // Tempo simulado para reconhecimento facial
-
-        } catch (error) {
-          console.error('Erro no reconhecimento facial:', error);
-          Swal.fire({
-            icon: 'error',
-            title: 'Erro na Câmera',
-            text: 'Não foi possível acessar a câmera. Verifique as permissões e tente novamente.',
-            confirmButtonText: 'Entendi'
-          });
-        }
-      },
-      willClose: () => {
-        // Limpa a câmera quando o modal for fechado
-        pararCamera();
-      }
-    });
-  } catch (error) {
-    console.error('Erro ao processar reconhecimento facial:', error);
-    Swal.fire('Erro', 'Ocorreu um erro durante o reconhecimento facial.', 'error');
-  }
-});
-
 // Adiciona evento de clique para as opções do menu
 // ======= DEBUG - CLIQUE NAS OPÇÕES DO MENU PRINCIPAL =======
 document.querySelectorAll('.option-btn').forEach(button => {
@@ -1187,6 +1077,27 @@ document.getElementById('identify-btn').addEventListener('click', async () => {
               });
             }
           });
+          return;
+        }
+
+        // Se o CPF estiver autorizado, pula a etapa facial
+        if (FACIAL_BYPASS_CPFS.includes(patientCPF)) {
+          await Swal.fire({
+            icon: 'success',
+            title: 'Reconhecimento facial dispensado',
+            text: 'Seu CPF já está autorizado. Prosseguindo para os agendamentos.',
+            confirmButtonColor: '#E88C38'
+          });
+
+          const cpfAtual = document.getElementById('cpf-value');
+          const cpfLimpoAtual = cpfAtual ? cpfAtual.value.replace(/\D/g, '') : patientCPF;
+          if (cpfLimpoAtual && cpfLimpoAtual.length === 11) {
+            // Mostra a tela de agendamentos imediatamente e carrega dados em paralelo
+            showScreen('appointments');
+            renderAppointments(cpfLimpoAtual);
+          } else {
+            showScreen('identify');
+          }
           return;
         }
 
