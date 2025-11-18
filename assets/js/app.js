@@ -76,8 +76,15 @@ async function fetchAppointments(cpf) {
 
     console.log('Buscando agendamentos para chave do beneficiário:', chaveBeneficiario);
 
-    // Usa um endpoint PHP para fazer a requisição e evitar problemas de CORS
-    const response = await fetch('ajax/agendamento_ajax.php', {
+    // Usa endpoints PHP específicos para cada tipo de serviço
+    const endpointMap = {
+      'terapia': 'ajax/agendamento_terapia_ajax.php',
+      'exame': 'ajax/agendamento_exame_ajax.php'
+    };
+    const optionKey = (selectedOption || '').toLowerCase();
+    const endpoint = endpointMap[optionKey] || 'ajax/agendamento_ajax.php';
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',

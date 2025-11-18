@@ -1,39 +1,25 @@
 <?php
-
 /**
  * Totem Auto Atendimento - Clínica Mais Saúde
- * Sistema em PHP 5.4 - 100% em Português Brasileiro
+ * Sistema integrado com API Smile Saúde
  */
-
-// Incluir configurações
-// require_once 'config.php';
-
-// Configurações básicas
 session_start();
 header('Content-Type: text/html; charset=UTF-8');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
-
-// Funções auxiliares PHP 5.4
-function formatarCPF($cpf)
-{
+// Funções auxiliares úteis
+function formatarCPF($cpf) {
     $cpf = preg_replace('/\D/', '', $cpf);
     if (strlen($cpf) == 11) {
         return substr($cpf, 0, 3) . '.' . substr($cpf, 3, 3) . '.' . substr($cpf, 6, 3) . '-' . substr($cpf, 9, 2);
     }
     return $cpf;
 }
-
-function validarCPF($cpf)
-{
+function validarCPF($cpf) {
     $cpf = preg_replace('/\D/', '', $cpf);
     if (strlen($cpf) != 11) return false;
-
-    // Verifica se todos os dígitos são iguais
     if (preg_match('/(\d)\1{10}/', $cpf)) return false;
-
-    // Calcula os dígitos verificadores
     for ($t = 9; $t < 11; $t++) {
         for ($d = 0, $c = 0; $c < $t; $c++) {
             $d += $cpf[$c] * (($t + 1) - $c);
@@ -43,128 +29,9 @@ function validarCPF($cpf)
     }
     return true;
 }
-
-function gerarNumeroSenha()
-{
-    $letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    $numeroAleatorio = rand(10, 99);
-    $letraAleatoria = $letras[rand(0, strlen($letras) - 1)];
-    return $letraAleatoria . $numeroAleatorio;
-}
-
-function obterDataAtual()
-{
-    return date('d/m/Y');
-}
-
-function obterHoraAtual()
-{
-    return date('H:i:s');
-}
-
-// Inicializar sessão se necessário
-if (!isset($_SESSION['timeout'])) {
-    $_SESSION['timeout'] = time();
-}
-
-// Processar requisições AJAX
-if (isset($_POST['acao'])) {
-    header('Content-Type: application/json; charset=UTF-8');
-
-    switch ($_POST['acao']) {
-        case 'autenticar_paciente':
-            $cpf = isset($_POST['cpf']) ? $_POST['cpf'] : '';
-            $cpf = preg_replace('/\D/', '', $cpf);
-
-            if (!validarCPF($cpf)) {
-                echo json_encode(array('sucesso' => false, 'mensagem' => 'CPF inválido'));
-                exit;
-            }
-
-            // Simulação de autenticação (substituir por API real)
-            $pacientes = array(
-                '12345678901' => array(
-                    'nome' => 'João Silva',
-                    'matricula' => '123456',
-                    'cpf' => formatarCPF($cpf),
-                    'data_nascimento' => '12/03/1980',
-                    'contratos' => array(
-                        array(
-                            'familia' => array(
-                                array('data_de_nascimento' => '12/03/1980')
-                            )
-                        )
-                    )
-                )
-            );
-
-            if (isset($pacientes[$cpf])) {
-                $_SESSION['paciente'] = $pacientes[$cpf];
-                echo json_encode(array('sucesso' => true, 'dados' => $pacientes[$cpf]));
-            } else {
-                echo json_encode(array('sucesso' => false, 'mensagem' => 'Paciente não encontrado'));
-            }
-            exit;
-
-        case 'gerar_senha':
-            $tipoAtendimento = isset($_POST['tipo_atendimento']) ? $_POST['tipo_atendimento'] : 'Geral';
-            $prioridade = isset($_POST['prioridade']) ? $_POST['prioridade'] : 'Normal';
-            $nomePaciente = isset($_SESSION['paciente']['nome']) ? $_SESSION['paciente']['nome'] : 'Paciente';
-
-            $senha = array(
-                'numero' => gerarNumeroSenha(),
-                'tipo' => $tipoAtendimento,
-                'prioridade' => $prioridade,
-                'data' => obterDataAtual(),
-                'hora' => obterHoraAtual(),
-                'paciente' => $nomePaciente
-            );
-
-            // Adicionar à fila de atendentes
-            if (!isset($_SESSION['fila_atendimento'])) {
-                $_SESSION['fila_atendimento'] = array();
-            }
-
-            $novoPacienteFila = array(
-                'id' => uniqid(),
-                'nome' => $nomePaciente,
-                'tipo_atendimento' => $tipoAtendimento,
-                'prioridade' => $prioridade,
-                'data' => obterDataAtual(),
-                'hora' => obterHoraAtual(),
-                'status' => 'aguardando',
-                'timestamp' => time()
-            );
-
-            // Adicionar no início da fila (mais recente primeiro) - Compatível PHP 5.4
-            $filaTemporaria = array($novoPacienteFila);
-            $_SESSION['fila_atendimento'] = array_merge($filaTemporaria, $_SESSION['fila_atendimento']);
-
-            $_SESSION['ultima_senha'] = $senha;
-            echo json_encode(array('sucesso' => true, 'senha' => $senha));
-            exit;
-
-        case 'listar_agendamentos':
-            $tipoServico = isset($_POST['tipo_servico']) ? $_POST['tipo_servico'] : '';
-
-            // Sem dados mockados: aguarda resposta real (ex.: banco ou API)
-            $agendamentos = array();
-
-            $agendamentosFiltrados = array();
-            if (!empty($tipoServico)) {
-                foreach ($agendamentos as $agendamento) {
-                    if (strtolower($agendamento['tipo']) == strtolower($tipoServico)) {
-                        $agendamentosFiltrados[] = $agendamento;
-                    }
-                }
-            } else {
-                $agendamentosFiltrados = $agendamentos;
-            }
-
-            echo json_encode(array('sucesso' => true, 'agendamentos' => $agendamentosFiltrados));
-            exit;
-    }
-}
+// Data e hora para exibição inicial
+function obterDataAtual() { return date('d/m/Y'); }
+function obterHoraAtual() { return date('H:i:s'); }
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
