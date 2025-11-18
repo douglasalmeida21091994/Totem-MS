@@ -427,14 +427,14 @@ async function renderAppointments(cpf) {
                     ${sortedAppointments.map((appointment, index) => `
                         <div class="appointment-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
                             <div class="appointment-card ${appointment.status.toLowerCase()}" data-id="${appointment.id}">
-                                <div class="appointment-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                                    <div class="appointment-time" style="display: flex; align-items: center; gap: 8px;">
-                                        <i class="far fa-clock"></i>
+                                <div class="appointment-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: nowrap; gap: 15px;">
+                                    <div class="appointment-time" style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+                                        <i class="far fa-clock" style="color: black !important; min-width: 16px;"></i>
                                         <span>${appointment.time} às ${appointment.endTime}</span>
-                                        ${appointment.type ? `<span style="background: rgba(0, 0, 0, 0.1); color: #333; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; white-space: nowrap;">${appointment.type}</span>` : ''}
                                     </div>
-                                    <div class="appointment-date" style="display: flex; align-items: center; gap: 4px; margin-left: auto;">
-                                        <i class="far fa-calendar-alt"></i>
+                                    ${appointment.type ? `<span style="background: rgba(0, 0, 0, 0.1); color: #333; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; white-space: nowrap; margin-right: auto;">${appointment.type}</span>` : '<span style="flex-grow: 1;"></span>'}
+                                    <div class="appointment-date" style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+                                        <i class="far fa-calendar-alt" style="min-width: 16px;"></i>
                                         <span>${appointment.date}</span>
                                     </div>
                                 </div>

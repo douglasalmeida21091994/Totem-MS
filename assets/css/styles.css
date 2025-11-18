@@ -2152,6 +2152,49 @@ position: relative; /* cria contexto para o overlay */
   border: 1px solid #eee;
 }
 
+/* Status Badges */
+.appointment-status {
+  display: flex;
+  justify-content: center;
+  margin: 0.5rem 0;
+}
+
+.appointment-status span {
+  padding: 4px 12px !important;
+  font-weight: 600 !important;
+  font-size: 0.9em !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 200px;
+  text-align: center;
+  display: inline-flex !important;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Confirmed Status */
+.appointment-status span[style*="background: #4CAF50"] {
+  background: #388E3C !important;
+  color: white !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+
+/* Pending Status */
+.appointment-status span[style*="background: #FFC107"] {
+  background: #F57C00 !important;
+  color: white !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+
+/* Icons */
+.appointment-card i.fa-check-circle,
+.appointment-card i.fa-clock {
+  color: #ffffff !important;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+}
+
 .appointment-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
@@ -2169,6 +2212,9 @@ position: relative; /* cria contexto para o overlay */
   color: #E88C38;
   margin-right: 0.5rem;
   width: 20px;
+  font-size: 1.1em;
+  min-width: 20px;
+  text-align: center;
   text-align: center;
 }
 
@@ -2454,7 +2500,6 @@ position: relative; /* cria contexto para o overlay */
 
 #appointments-list .appointment-details i {
   margin-right: 0.6rem;
-  color: var(--primary-dark);
   width: 20px;
   text-align: center;
 }
