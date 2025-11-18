@@ -1,0 +1,14 @@
+[05-Nov-2025 21:03:46 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed when a session is active in C:\wamp64\www\TOTEM-MAIS-SAUDE\config.php on line 13
+[05-Nov-2025 21:03:46 UTC] PHP Stack trace:
+[05-Nov-2025 21:03:46 UTC] PHP   1. {main}() C:\wamp64\www\TOTEM-MAIS-SAUDE\index.php:0
+[05-Nov-2025 21:03:46 UTC] PHP   2. require_once() C:\wamp64\www\TOTEM-MAIS-SAUDE\index.php:31
+[05-Nov-2025 21:03:46 UTC] PHP   3. ini_set($option = 'session.cookie_lifetime', $value = 0) C:\wamp64\www\TOTEM-MAIS-SAUDE\config.php:13
+[05-Nov-2025 21:03:46 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed when a session is active in C:\wamp64\www\TOTEM-MAIS-SAUDE\config.php on line 14
+[05-Nov-2025 21:03:46 UTC] PHP Stack trace:
+[05-Nov-2025 21:03:46 UTC] PHP   1. {main}() C:\wamp64\www\TOTEM-MAIS-SAUDE\index.php:0
+[05-Nov-2025 21:03:46 UTC] PHP   2. require_once() C:\wamp64\www\TOTEM-MAIS-SAUDE\index.php:31
+[05-Nov-2025 21:03:46 UTC] PHP   3. ini_set($option = 'session.gc_maxlifetime', $value = 3600) C:\wamp64\www\TOTEM-MAIS-SAUDE\config.php:14
+[05-Nov-2025 21:03:46 UTC] PHP Notice:  session_start(): Ignoring session_start() because a session is already active (started from C:\wamp64\www\TOTEM-MAIS-SAUDE\index.php on line 15) in C:\wamp64\www\TOTEM-MAIS-SAUDE\index.php on line 34
+[05-Nov-2025 21:03:46 UTC] PHP Stack trace:
+[05-Nov-2025 21:03:46 UTC] PHP   1. {main}() C:\wamp64\www\TOTEM-MAIS-SAUDE\index.php:0
+[05-Nov-2025 21:03:46 UTC] PHP   2. session_start() C:\wamp64\www\TOTEM-MAIS-SAUDE\index.php:34
