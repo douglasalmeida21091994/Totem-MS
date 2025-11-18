@@ -38,7 +38,8 @@ let patientCPF = '';
 let selectedAppointment = null;
 let inactivityTimer = null;
 let selectedTicketType = ''; // guarda o tipo de senha digital (Atendimento Geral, etc)
-let currentChaveBeneficiario = null;
+window.currentChaveBeneficiario = null;
+let appointments = []; // Declarar appointments como variável global
 
 // Variáveis do carrossel
 let currentSlide = 0;
@@ -48,7 +49,6 @@ let totalSlides = 0;
 const FACIAL_BYPASS_CPFS = ['11103902466', '10352061456', '54710755019'];
 
 
-// Função para buscar agendamentos da API
 // Função para buscar agendamentos da API
 async function fetchAppointments(cpf) {
   try {
@@ -78,7 +78,7 @@ async function fetchAppointments(cpf) {
     const chaveBeneficiario = authData.chave_beneficiario;
     if (!chaveBeneficiario) throw new Error('Não foi possível identificar a chave do beneficiário.');
 
-    currentChaveBeneficiario = chaveBeneficiario;
+    window.currentChaveBeneficiario = chaveBeneficiario;
 
     console.log('Buscando agendamentos para chave do beneficiário:', chaveBeneficiario);
 
@@ -133,6 +133,7 @@ async function fetchAppointments(cpf) {
     });
 
     console.log('Agendamentos mapeados:', JSON.stringify(agendamentosMapeados, null, 2));
+    appointments = agendamentosMapeados; // Atribuir ao array global
     return agendamentosMapeados;
 
   } catch (error) {
@@ -641,18 +642,35 @@ function enableTouchAppointmentSelection(appointments) {
       },
       buttonsStyling: false,
       allowOutsideClick: false
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        // Habilita o botão de confirmação global
-        if (confirmBtn) {
-          confirmBtn.disabled = false;
-          confirmBtn.style.opacity = '1';
+
+        const chave = currentChaveBeneficiario;
+        const confirmado = await confirmarAgendamentoReal(idAtendimento, chave, appointments);
+
+        if (!confirmado.sucesso) {
+          await Swal.fire({
+            icon: "error",
+            title: "Erro!",
+            text: "Não foi possível confirmar o agendamento.",
+          });
+          return;
         }
 
-        // Vai para a tela de confirmação
+        renderAppointments(patientCPF);
+
+        await Swal.fire({
+          title: 'Sucesso!',
+          text: 'Agendamento confirmado com sucesso!',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        });
+
+        updateConfirmationScreen();
         showScreen('confirmation');
       }
     });
+
   }
 
   // Adiciona eventos para cada card
@@ -2050,13 +2068,15 @@ function enableAppointmentSelection() {
 
     // Quando clicar em Confirmar Agendamento
     if (confirmBtn) {
-      confirmBtn.addEventListener("click", (event) => {
+      confirmBtn.addEventListener("click", async (event) => {
         event.stopPropagation();
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Confirmando...";
 
         // Obtém os dados do agendamento
-        const idAtendimento = card.closest('.appointment-card')?.dataset.id || "";
+        const idAtendimento = card.dataset.id;
+
         const profissional = card.querySelector(".professional")?.innerText.replace("Profissional:", "").trim() || "—";
-        // Ajuste para pegar a especialidade corretamente
         const especialidadeElement = card.querySelector(".specialty");
         const especialidade = (especialidadeElement ?
           especialidadeElement.innerText.replace("Especialidade:", "").trim() :
@@ -2074,6 +2094,140 @@ function enableAppointmentSelection() {
           status
         });
 
+        // Chave do beneficiário
+        const chaveBeneficiario = window.currentChaveBeneficiario || null;
+
+        let resultado = false;
+        let mensagem = "";
+        let responseJson = null;
+
+        if (typeof Swal !== "undefined") {
+          Swal.fire({
+            title: 'Processando Confirmação...',
+            text: 'Por favor, aguarde.',
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+        }
+
+        try {
+          responseJson = await confirmarAgendamentoReal(idAtendimento, chaveBeneficiario, appointments);
+          resultado = responseJson?.sucesso === true;
+          mensagem = resultado ? "Agendamento confirmado com sucesso!" : (responseJson?.msg || "Não foi possível confirmar o agendamento.");
+        } catch (e) {
+          mensagem = "Erro ao confirmar: " + (e.message || e);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Espera 3 segundos
+
+        if (typeof Swal !== "undefined") {
+          Swal.close(); // Fecha o loading
+          Swal.fire({
+            icon: resultado ? "success" : "error",
+            title: resultado ? "Sucesso" : "Erro",
+            text: mensagem,
+            timer: 2500,
+            showConfirmButton: false,
+didClose: async () => {
+
+  if (!resultado) return;
+
+  // Log dos dados retornados
+  if (responseJson?.dados_agendamento) {
+    console.log("Dados do agendamento confirmado:", responseJson.dados_agendamento);
+  }
+
+  // Seleciona o card exato
+  const targetCard = document.querySelector(`.appointment-card[data-id="${idAtendimento}"]`);
+  if (!targetCard) return;
+
+  const statusBadge = targetCard.querySelector(".appointment-status");
+  if (!statusBadge) return;
+
+  // 🔄 Aguarda a réplica da Smile antes da atualização visual
+  await new Promise(resolve => setTimeout(resolve, 1200));
+
+  // Marca no DOM como confirmado
+  targetCard.dataset.confirmado = "1";
+
+  // Atualiza visual ANTES de fechar ou permitir fechar o modal de sucesso
+  statusBadge.innerHTML = `
+    <span style="
+      background:#4CAF50;
+      color:white;
+      padding:2px 8px;
+      border-radius:12px;
+      font-size:0.8em;
+      white-space:nowrap;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    ">
+      <i class="fas fa-check-circle"></i> Confirmado
+    </span>
+  `;
+
+  statusBadge.classList.add("confirmed");
+  statusBadge.classList.remove("not-confirmed");
+
+  // Remove o botão de confirmar do card
+  const btn = targetCard.querySelector(".confirm-appointment-btn");
+  if (btn) btn.remove();
+
+  // Agora sim, modal final (já com card 100% atualizado)
+  await Swal.fire({
+    icon: "success",
+    title: "Sucesso!",
+    text: "Agendamento confirmado!",
+    timer: 2000,
+    showConfirmButton: false
+  });
+
+  // Vai para a tela de confirmação
+  showScreen('confirmation');
+}
+
+          });
+        } else {
+          alert(mensagem);
+          // Atualiza status visual do card se confirmado (para caso sem SweetAlert2)
+          if (resultado) {
+            if (responseJson && responseJson.dados_agendamento) {
+              console.log("Dados do agendamento confirmado:", responseJson.dados_agendamento);
+            }
+            const statusBadge = card.querySelector(".status-badge");
+            if (statusBadge) {
+              // esperar a réplica do backend da Smile
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              if (appointmentStatus === "1") {
+
+                // Grava o status no DOM — SEM DEPENDER DO ARRAY
+                targetCard.dataset.confirmado = "1";
+
+                statusBadge.innerText = "Confirmado";
+                statusBadge.classList.add("confirmed");
+                statusBadge.classList.remove("not-confirmed");
+
+              } else {
+
+                targetCard.dataset.confirmado = "0";
+
+                statusBadge.innerText = "Não Confirmado";
+                statusBadge.classList.remove("confirmed");
+                statusBadge.classList.add("not-confirmed");
+              }
+
+
+            }
+            confirmBtn.remove();
+          }
+        }
+
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Confirmar Agendamento";
+
         // Cria o HTML personalizado para o SweetAlert2
         const confirmHtml = `
           <div class="appointment-confirm">
@@ -2086,59 +2240,44 @@ function enableAppointmentSelection() {
           </div>
         `;
 
-        // Exibe o SweetAlert2 personalizado
-        Swal.fire({
-          title: 'Confirmar Agendamento',
-          html: confirmHtml,
-          icon: 'question',
-          showCancelButton: true,
-          confirmButtonText: 'Confirmar',
-          cancelButtonText: 'Cancelar',
-          customClass: {
-            confirmButton: 'btn-confirm',
-            cancelButton: 'btn-cancel'
-          },
-          buttonsStyling: false,
-          showLoaderOnConfirm: true,
-          preConfirm: () => {
-            // Preenche os campos na tela de confirmação
-            document.getElementById("confirm-professional").textContent = profissional;
-            document.getElementById("confirm-specialty").textContent = especialidade;
-            document.getElementById("confirm-time").textContent = `${horario} - ${data}`;
-
-            // Retorna os dados para uso posterior se necessário
-            return { profissional, especialidade, horario, data, status };
+        async function confirmarAgendamentoReal(idAtendimento, chaveBeneficiario, appointments) {
+          if (!idAtendimento || !chaveBeneficiario) {
+            console.error("Parâmetros inválidos para confirmação.");
+            return false;
           }
-        }).then((result) => {
-          if (result.isConfirmed) {
-          const logChave = currentChaveBeneficiario || '3386751';
-          console.log('Agendamento confirmado:', {
-            id_atendimento: idAtendimento,
-            chave_beneficiario: logChave
-          });
-          // Mostra o SweetAlert de sucesso
-          Swal.fire({
-            title: 'Sucesso!',
-            text: 'Agendamento confirmado com sucesso!',
-            icon: 'success',
-            confirmButtonText: 'OK',
-            customClass: {
-              confirmButton: 'btn-confirm',
-            },
-            buttonsStyling: false,
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            allowEnterKey: false
-          }).then(() => {
-            // Mantém a tela de confirmação visível para o usuário conferir os dados
-            updateConfirmationScreen();
-            showScreen('confirmation');
 
-            // Garante que o botão principal esteja disponível
-            document.getElementById('confirm-btn')?.focus();
-          });
+          try {
+            const response = await fetch("ajax/confirmar_agendamento_ajax.php", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                id_atendimento: Number(idAtendimento),
+                chave_beneficiario: Number(chaveBeneficiario)
+              })
+            });
+
+            const data = await response.json();
+            console.log("Retorno da API de confirmação:", data);
+
+            if (data.sucesso) {
+              const idx = appointments.findIndex(app => app.id_atendimento === idAtendimento);
+              if (idx !== -1) appointments[idx].isConfirmed = "1";
+            }
+
+            return data;
+          } catch (e) {
+            console.error("Erro API de confirmação:", e);
+            return { sucesso: false, msg: e.message || "Erro na comunicação com a API" };
           }
-        });
+        }
+
+
+
+
+
+
       });
     }
   });
@@ -2163,7 +2302,7 @@ let isModalOpen = false;
 function goToWelcomeScreen() {
   // Impede fechamento se modal (SweetAlert2) estiver aberto
   if (isModalOpen) {
-    console.log("🧠 Modal ativo — aguardando fechamento para voltar.");
+    console.log("🧠Modal ativo — aguardando fechamento para voltar.");
     return;
   }
 
