@@ -23,6 +23,7 @@
     --error: #F44336;
     --info: #2196F3;
     --warning: #FFC107;
+    --pending: #FFC107;
     
     /* Shadows */
     --shadow-light: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -679,6 +680,7 @@ body.identify-no-scroll {
     margin: 2rem auto 0;
     min-width: 250px;
     padding: 0.75rem 2rem;
+    opacity: 1 !important;
 }
 
 .appointment-details {
@@ -1975,6 +1977,57 @@ position: relative; /* cria contexto para o overlay */
   margin-right: 0.5rem;
   color: #777;
   font-size: 0.9em;
+}
+
+/* Estilo para o status de confirmação */
+.confirmation-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.confirmation-status i {
+  margin-right: 0.5rem;
+  font-size: 1rem;
+}
+
+.confirmation-status.confirmed {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #2e7d32;
+  border: 1px solid rgba(76, 175, 80, 0.2);
+}
+
+.confirmation-status.pending {
+  background-color: rgba(255, 193, 7, 0.1);
+  color: #ff8f00;
+  border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+/* Ajuste para a tela de confirmação */
+.confirmation-content .appointment-details {
+  position: relative;
+  padding-bottom: 1rem;
+}
+
+.confirmation-status {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .confirmation-status {
+    position: static;
+    display: inline-flex;
+    margin-top: 1rem;
+  }
 }
 
 .appointment-status {
