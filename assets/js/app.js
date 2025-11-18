@@ -109,6 +109,7 @@ async function fetchAppointments(cpf) {
 
     const agendamentosMapeados = data.dados.map(agendamento => {
       console.log('Processando agendamento:', agendamento);
+      const isConfirmed = agendamento.isConfirmed === '1';
       return {
         id: agendamento.id_atendimento,
         type: agendamento.tipo || 'Consulta',
@@ -121,7 +122,8 @@ async function fetchAppointments(cpf) {
         time: agendamento.hora_inicio || '',
         horario: agendamento.hora_inicio || '',
         endTime: agendamento.hora_final || '',
-        status: 'Confirmado',
+        status: isConfirmed ? 'Confirmado' : 'Pendente',
+        isConfirmed: isConfirmed,
         room: 'A definir',
         nome_unidade: agendamento.nome_unidade || ''
       };
@@ -441,6 +443,11 @@ async function renderAppointments(cpf) {
                                         <i class="fas fa-map-marker-alt"></i>
                                         ${appointment.nome_unidade || appointment.location || 'Local não informado'}
                                     </p>
+                                    <div class="appointment-status">
+                                        ${appointment.isConfirmed ? 
+                                          '<span style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;"><i class="fas fa-check-circle"></i> Confirmado</span>' : 
+                                          '<span style="background: #FFC107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;"><i class="far fa-clock" style="color: #FFF;"></i> Aguardando confirmação</span>'}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -738,6 +745,18 @@ function updateConfirmationScreen() {
   }
 
   if (confirmRoomElement) confirmRoomElement.textContent = selectedAppointment.room || 'A ser definido';
+  
+  // Atualiza o status de confirmação
+  const confirmationStatusElement = document.getElementById('confirmation-status');
+  if (confirmationStatusElement) {
+    if (selectedAppointment.isConfirmed) {
+      confirmationStatusElement.innerHTML = '<i class="fas fa-check-circle"></i> Agendamento Confirmado';
+      confirmationStatusElement.className = 'confirmation-status confirmed';
+    } else {
+      confirmationStatusElement.innerHTML = '<i class="far fa-clock"></i> Aguardando Confirmação';
+      confirmationStatusElement.className = 'confirmation-status pending';
+    }
+  }
 
   // Seleciona o campo do "Profissional/Local"
   const professionalLabel = document.querySelector('#label-professional');
@@ -1285,99 +1304,81 @@ async function gerarTicket(prioridade) {
 }
 
 
-// Confirm check-in button
-if (confirmBtn) {
-  confirmBtn.addEventListener('click', async () => {
-    if (!selectedAppointment || !selectedAppointment.id) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Selecione um agendamento',
-        text: 'Escolha um agendamento para confirmar o check-in.',
-        confirmButtonColor: '#E88C38'
-      });
-      return;
-    }
-
-    Swal.fire({
-      title: 'Confirmando check-in...',
-      html: 'Aguarde enquanto registramos sua chegada.',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
-    });
-
-    try {
-      // 🔹 Chama o PHP para confirmar e adicionar o paciente à fila
-      const response = await fetch('ajax/atendimento_ajax.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          acao: 'confirmar_agendamento',
-          agendamento_id: selectedAppointment.id
-        })
-      });
-
-      const texto = await response.text();
-      console.log('📩 Resposta bruta:', texto);
-
-      let dados;
-      try {
-        dados = JSON.parse(texto);
-      } catch {
-        throw new Error('Resposta inválida do servidor.');
-      }
-
-      Swal.close();
-
-      if (dados.sucesso) {
-        // ✅ Mostra o alerta de sucesso
-        await Swal.fire({
-          icon: 'success',
-          title: 'Check-in realizado com sucesso!',
-          html: `
-            <p style="margin-top:8px;font-size:1.05rem;">
-              ${dados.mensagem || 'Você foi adicionado à fila de atendimento.'}
-            </p>
-          `,
-          confirmButtonColor: '#E88C38'
-        });
-
-        // 🔹 Atualiza dados visuais
-        const ticketPatient = document.getElementById('ticket-patient');
-        const ticketDate = document.getElementById('ticket-date');
-        const ticketTime = document.getElementById('ticket-time');
-        const ticketTypeSpan = document.querySelector('.ticket-type span');
-        const agora = new Date();
-
-        if (ticketPatient) ticketPatient.textContent = patientName || 'Paciente';
-        if (ticketDate) ticketDate.textContent = formatDate(agora);
-        if (ticketTime) ticketTime.textContent = formatTimeOnly(agora);
-        if (ticketTypeSpan) ticketTypeSpan.textContent = `${selectedAppointment.tipo || 'Atendimento'} - Normal`;
-
-        // 🔹 Vai para a tela da fila
-        showScreen('queue');
+// Botão OK da tela de confirmação
+document.addEventListener('DOMContentLoaded', function() {
+  const confirmButton = document.getElementById('confirm-btn');
+  if (confirmButton) {
+    confirmButton.addEventListener('click', async function(e) {
+      e.preventDefault();
+      console.log('Botão OK clicado'); // Log de depuração
+      
+      // Obtém o CPF atual
+      const cpfInput = document.getElementById('cpf-value');
+      const cpf = cpfInput ? cpfInput.value.replace(/\D/g, '') : '';
+      console.log('CPF encontrado:', cpf); // Log de depuração
+      
+      // Volta para a tela de agendamentos
+      if (cpf && cpf.length === 11) {
+        try {
+          console.log('Iniciando recarregamento de agendamentos...'); // Log de depuração
+          
+          // Mostra o loading
+          const loadingElement = document.getElementById('loading');
+          if (loadingElement) {
+            loadingElement.style.display = 'flex';
+            console.log('Mostrando loading...'); // Log de depuração
+          }
+          
+          // Força o recarregamento dos agendamentos
+          console.log('Buscando agendamentos...'); // Log de depuração
+          const appointments = await fetchAppointments(cpf);
+          console.log('Agendamentos carregados:', appointments); // Log de depuração
+          
+          // Renderiza os agendamentos atualizados
+          console.log('Renderizando agendamentos...'); // Log de depuração
+          renderAppointments(cpf);
+          
+          // Volta para a tela de agendamentos
+          console.log('Mostrando tela de agendamentos...'); // Log de depuração
+          showScreen('appointments');
+          
+          // Mostra mensagem de sucesso
+          console.log('Mostrando mensagem de sucesso...'); // Log de depuração
+          await Swal.fire({
+            icon: 'success',
+            title: 'Atualizado!',
+            text: 'Os agendamentos foram atualizados com sucesso.',
+            showConfirmButton: false,
+            timer: 1500
+          });
+          
+        } catch (error) {
+          console.error('Erro ao recarregar agendamentos:', error);
+          await Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: 'Não foi possível atualizar os agendamentos. Tente novamente.',
+            confirmButtonColor: '#E88C38'
+          });
+        } finally {
+          // Esconde o loading
+          const loadingElement = document.getElementById('loading');
+          if (loadingElement) {
+            loadingElement.style.display = 'none';
+            console.log('Escondendo loading...'); // Log de depuração
+          }
+        }
       } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Erro ao confirmar',
-          text: dados.mensagem || 'O servidor não confirmou o check-in.',
-          confirmButtonColor: 'var(--primary-dark)'
-        });
+        console.log('CPF inválido, voltando para tela inicial'); // Log de depuração
+        // Se não houver CPF, volta para a tela inicial
+        showScreen('welcome');
+        resetForm();
       }
-
-    } catch (erro) {
-      console.error('❌ Erro ao confirmar agendamento:', erro);
-      Swal.fire({
-        icon: 'error',
-        title: 'Falha de Conexão',
-        text: 'Não foi possível se conectar ao servidor. Tente novamente.',
-        confirmButtonColor: 'var(--primary-dark)'
-      });
-    }
-  });
-}
-
-
-
+    });
+  } else {
+    console.error('Botão de confirmação não encontrado no DOM'); // Log de depuração
+  }
+});
 
 
 // New ticket button

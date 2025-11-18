@@ -282,7 +282,7 @@ function obterHoraAtual() { return date('H:i:s'); }
                         <i class="fas fa-check-circle"></i>
                     </div>
 
-                    <h2>Confirmação de Check-in</h2>
+                    <h2>Agendamento confirmado com sucesso</h2>
 
                     <div class="appointment-details">
                         <p><i class="fas fa-user detail-icon"></i> <strong>Paciente:</strong> <span id="confirm-patient-name"></span></p>
@@ -291,9 +291,10 @@ function obterHoraAtual() { return date('H:i:s'); }
                         <p><i class="fas fa-heartbeat detail-icon"></i> <strong>Especialidade:</strong> <span id="confirm-specialty"></span></p>
                         <p><i class="fas fa-clock detail-icon"></i> <strong>Horário:</strong> <span id="confirm-time"></span></p>
                         <p><i class="fas fa-door-open detail-icon"></i> <strong>Sala:</strong> <span id="confirm-room"></span></p>
+                        <!-- <div id="confirmation-status" class="confirmation-status"></div> -->
                     </div>
 
-                    <button id="confirm-btn" class="primary-btn">Confirmar Check-in</button>
+                    <button id="confirm-btn" class="primary-btn">OK</button>
                 </div>
             </div>
 
