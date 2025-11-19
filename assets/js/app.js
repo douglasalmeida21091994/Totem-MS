@@ -41,43 +41,6 @@ let selectedTicketType = ''; // guarda o tipo de senha digital (Atendimento Gera
 window.currentChaveBeneficiario = null;
 let appointments = []; // Declarar appointments como variável global
 
-// Função global para confirmar agendamento no backend
-async function confirmarAgendamentoReal(idAtendimento, chaveBeneficiario, appointmentsList) {
-  if (!idAtendimento || !chaveBeneficiario) {
-    console.error('Parâmetros inválidos para confirmação. idAtendimento:', idAtendimento, 'chave:', chaveBeneficiario);
-    return { sucesso: false, msg: 'Parâmetros inválidos' };
-  }
-
-  try {
-    const response = await fetch('ajax/confirmar_agendamento_ajax.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id_atendimento: Number(idAtendimento), chave_beneficiario: Number(chaveBeneficiario) })
-    });
-
-    const data = await response.json();
-    console.log('Retorno da API de confirmação:', data);
-
-    if (data && data.sucesso) {
-      // Atualiza array local (compatível com estruturas antigas e novas)
-      try {
-        const idx = (Array.isArray(appointmentsList) ? appointmentsList : appointments).findIndex(app => (app.id == idAtendimento || app.id_atendimento == idAtendimento));
-        if (idx !== -1) {
-          const targetArray = Array.isArray(appointmentsList) ? appointmentsList : appointments;
-          targetArray[idx].isConfirmed = '1';
-        }
-      } catch (e) {
-        console.warn('Não foi possível atualizar o array local de agendamentos:', e);
-      }
-    }
-
-    return data;
-  } catch (e) {
-    console.error('Erro API de confirmação:', e);
-    return { sucesso: false, msg: e.message || 'Erro na comunicação com a API' };
-  }
-}
-
 // Variáveis do carrossel
 let currentSlide = 0;
 let totalSlides = 0;
@@ -683,6 +646,7 @@ function enableTouchAppointmentSelection(appointments) {
       if (result.isConfirmed) {
 
         const chave = currentChaveBeneficiario;
+        // const confirmado = await confirmarAgendamentoReal(idAtendimento, chave, appointments);
         const confirmado = await confirmarAgendamentoReal(selectedAppointment.id, chave, appointments);
 
         if (!confirmado.sucesso) {
@@ -1136,7 +1100,7 @@ document.getElementById('identify-btn').addEventListener('click', async () => {
           }
         }
 
-        // 🚫 Se for “Retirar Senha Digital”, gera ticket direto
+        // 🚫 Se for "Retirar Senha Digital", gera ticket direto
         if (selectedOption === 'senha') {
           await Swal.fire({
             title: 'Selecione o tipo de atendimento',
@@ -2418,7 +2382,7 @@ function enableAppointmentSelection() {
                   // Continua imediatamente: logs e encaminhamento
                   console.log("🟢 Guia gerada com sucesso:", numeroGuia);
                   // Envia dados para encaminhar à fila do profissional
-                    try {
+                  try {
                     const encaminharPayload = {
                       id_atendimento: Number(idAtendimento),
                       chave_beneficiario: Number(window.currentChaveBeneficiario),
@@ -2601,12 +2565,38 @@ function enableAppointmentSelection() {
           </div>
         `;
 
-        
+        async function confirmarAgendamentoReal(idAtendimento, chaveBeneficiario, appointments) {
+          if (!idAtendimento || !chaveBeneficiario) {
+            console.error("Parâmetros inválidos para confirmação.");
+            return false;
+          }
 
+          try {
+            const response = await fetch("ajax/confirmar_agendamento_ajax.php", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                id_atendimento: Number(idAtendimento),
+                chave_beneficiario: Number(chaveBeneficiario)
+              })
+            });
 
+            const data = await response.json();
+            console.log("Retorno da API de confirmação:", data);
 
+            if (data.sucesso) {
+              const idx = appointments.findIndex(app => app.id_atendimento === idAtendimento);
+              if (idx !== -1) appointments[idx].isConfirmed = "1";
+            }
 
-
+            return data;
+          } catch (e) {
+            console.error("Erro API de confirmação:", e);
+            return { sucesso: false, msg: e.message || "Erro na comunicação com a API" };
+          }
+        }
 
       });
     }
@@ -2804,8 +2794,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener("click", function (e) {
-    if (e.target.closest("#btn-sair")) {
-        window.location.href = "entrada.php";
-    }
+  if (e.target.closest("#btn-sair")) {
+    window.location.href = "entrada.php";
+  }
 });
-
