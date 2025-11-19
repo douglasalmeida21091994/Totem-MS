@@ -55,7 +55,7 @@ try {
         "especialidade"  => $especialidade,
 
         // CAMPOS FIXOS
-        "operador"       => 719539,
+        "operador"       => 1892654,
         "regime"         => "E",
         "natureza"       => "A",
         "id_cid"         => "",
