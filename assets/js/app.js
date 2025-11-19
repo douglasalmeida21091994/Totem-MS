@@ -657,6 +657,8 @@ function enableTouchAppointmentSelection(appointments) {
           return;
         }
 
+        
+
         renderAppointments(patientCPF);
 
         await Swal.fire({
@@ -759,8 +761,8 @@ function enableTouchAppointmentSelection(appointments) {
 // ====================== ATUALIZAÇÃO DA TELA DE CONFIRMAÇÃO ======================
 function updateConfirmationScreen() {
 
-  console.log("🟢 updateConfirmationScreen() recebeu:", selectedAppointment);
-  console.log("🟢 HORÁRIO recebido:", selectedAppointment?.horario);
+  console.log("updateConfirmationScreen() recebeu:", selectedAppointment);
+  console.log("HORÁRIO recebido:", selectedAppointment?.horario);
 
   if (!selectedAppointment) return;
 
@@ -876,7 +878,7 @@ document.getElementById('identify-form')?.addEventListener('submit', async (e) =
   if (inlineLoading) inlineLoading.style.display = 'flex'; // mostra o spinner dentro do card
 
 
-  clearTimeout(inactivityTimer); // 🚫 Pausa o retorno automático
+  clearTimeout(inactivityTimer); // Pausa o retorno automático
 
   try {
     await renderAppointments(cpf);
@@ -892,7 +894,7 @@ document.getElementById('identify-form')?.addEventListener('submit', async (e) =
     if (inlineLoading) inlineLoading.style.display = 'none'; // esconde o spinner interno
 
 
-    resetInactivityTimer(); // ♻️ Retoma o timer normal
+    resetInactivityTimer(); //  Retoma o timer normal
   }
 });
 
@@ -2219,6 +2221,42 @@ if (roomEl) {
   const btn = targetCard.querySelector(".confirm-appointment-btn");
   if (btn) btn.remove();
 
+// ===========================================
+// 🔹 GERAR A GUIA AQUI — LOCAL CORRETO
+// ===========================================
+
+try {
+    console.log("📤 Enviando dados para gerar a guia...");
+
+    const gerarGuiaResponse = await fetch("ajax/gerar_guia_ajax.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            chave_beneficiario: Number(window.currentChaveBeneficiario),
+            executante: responseJson.dados_agendamento.nome_profissional,
+            solicitante: responseJson.dados_agendamento.nome_profissional,
+            id_unidade: responseJson.dados_agendamento.id_local_atendimento,
+            nome_especialidade: responseJson.dados_agendamento.nome_especialidade
+        })
+    });
+
+    const guiaJson = await gerarGuiaResponse.json();
+    console.log("Retorno da geração de guia:", guiaJson);
+
+    if (!guiaJson.sucesso && guiaJson.statusCode !== 200) {
+        console.error("Falha ao gerar guia!", guiaJson);
+
+        await Swal.fire({
+            icon: "warning",
+            title: "Guia não gerada",
+            text: "O agendamento foi confirmado, mas não foi possível gerar a guia."
+        });
+    }
+
+} catch (erroGuia) {
+    console.error("ERRO AO GERAR GUIA:", erroGuia);
+}
+  
   // Agora sim, modal final (já com card 100% atualizado)
   // await Swal.fire({
   //   icon: "success",
