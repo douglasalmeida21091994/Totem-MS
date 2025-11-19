@@ -46,7 +46,7 @@ let currentSlide = 0;
 let totalSlides = 0;
 
 // CPFs autorizados a pular a etapa de reconhecimento facial
-const FACIAL_BYPASS_CPFS = ['11103902466', '10352061456', '54710755019'];
+const FACIAL_BYPASS_CPFS = ['10352061456', '54710755019'];
 
 
 // Função para buscar agendamentos da API
@@ -657,7 +657,7 @@ function enableTouchAppointmentSelection(appointments) {
           return;
         }
 
-        
+
 
         renderAppointments(patientCPF);
 
@@ -2079,8 +2079,8 @@ function enableAppointmentSelection() {
 
         const appointment = appointments.find(a => a.id == idAtendimento);
 
-console.log("🟢 APPOINTMENT no clique:", appointment);
-console.log("🟢 HORÁRIO no clique:", appointment?.horario);
+        console.log("🟢 APPOINTMENT no clique:", appointment);
+        console.log("🟢 HORÁRIO no clique:", appointment?.horario);
 
 
         const profissional = card.querySelector(".professional")?.innerText.replace("Profissional:", "").trim() || "—";
@@ -2138,67 +2138,67 @@ console.log("🟢 HORÁRIO no clique:", appointment?.horario);
             text: mensagem,
             timer: 2500,
             showConfirmButton: false,
-didClose: async () => {
+            didClose: async () => {
 
-const ap = appointments.find(a => a.id == idAtendimento);
+              const ap = appointments.find(a => a.id == idAtendimento);
 
-console.log("🟢 HORÁRIO dentro do didClose:", ap?.horario);
-
-
-  // Preencher modal de confirmação
-if (responseJson?.dados_agendamento) {
-
-    // Nome do paciente
-    document.getElementById("confirm-patient-name").textContent =
-        document.getElementById("patient-name").textContent;
-
-    // Serviço
-    document.getElementById("confirm-service-type").textContent =
-        document.getElementById("service-type").textContent || "Consulta";
-
-    // Profissional
-    document.getElementById("confirm-professional").textContent =
-        responseJson.dados_agendamento.nome_profissional || "";
-
-    // Especialidade
-    document.getElementById("confirm-specialty").textContent =
-        responseJson.dados_agendamento.nome_especialidade || "";
-
-    // Horário → você já tem no objeto do card
-    const ap = appointments.find(a => a.id == idAtendimento);
-
-    document.getElementById("confirm-time").textContent = ap?.horario || "";
-
-const roomEl = document.getElementById("confirm-room");
-if (roomEl) {
-    roomEl.textContent = responseJson.dados_agendamento.nome_local_atendimento || "";
-}
-
-}
+              console.log("🟢 HORÁRIO dentro do didClose:", ap?.horario);
 
 
-  if (!resultado) return;
+              // Preencher modal de confirmação
+              if (responseJson?.dados_agendamento) {
 
-  // Log dos dados retornados
-  if (responseJson?.dados_agendamento) {
-    console.log("Dados do agendamento confirmado:", responseJson.dados_agendamento);
-  }
+                // Nome do paciente
+                document.getElementById("confirm-patient-name").textContent =
+                  document.getElementById("patient-name").textContent;
 
-  // Seleciona o card exato
-  const targetCard = document.querySelector(`.appointment-card[data-id="${idAtendimento}"]`);
-  if (!targetCard) return;
+                // Serviço
+                document.getElementById("confirm-service-type").textContent =
+                  document.getElementById("service-type").textContent || "Consulta";
 
-  const statusBadge = targetCard.querySelector(".appointment-status");
-  if (!statusBadge) return;
+                // Profissional
+                document.getElementById("confirm-professional").textContent =
+                  responseJson.dados_agendamento.nome_profissional || "";
 
-  // 🔄 Aguarda a réplica da Smile antes da atualização visual
-  await new Promise(resolve => setTimeout(resolve, 1200));
+                // Especialidade
+                document.getElementById("confirm-specialty").textContent =
+                  responseJson.dados_agendamento.nome_especialidade || "";
 
-  // Marca no DOM como confirmado
-  targetCard.dataset.confirmado = "1";
+                // Horário → você já tem no objeto do card
+                const ap = appointments.find(a => a.id == idAtendimento);
 
-  // Atualiza visual ANTES de fechar ou permitir fechar o modal de sucesso
-  statusBadge.innerHTML = `
+                document.getElementById("confirm-time").textContent = ap?.horario || "";
+
+                const roomEl = document.getElementById("confirm-room");
+                if (roomEl) {
+                  roomEl.textContent = responseJson.dados_agendamento.nome_local_atendimento || "";
+                }
+
+              }
+
+
+              if (!resultado) return;
+
+              // Log dos dados retornados
+              if (responseJson?.dados_agendamento) {
+                console.log("Dados do agendamento confirmado:", responseJson.dados_agendamento);
+              }
+
+              // Seleciona o card exato
+              const targetCard = document.querySelector(`.appointment-card[data-id="${idAtendimento}"]`);
+              if (!targetCard) return;
+
+              const statusBadge = targetCard.querySelector(".appointment-status");
+              if (!statusBadge) return;
+
+              // 🔄 Aguarda a réplica da Smile antes da atualização visual
+              await new Promise(resolve => setTimeout(resolve, 1200));
+
+              // Marca no DOM como confirmado
+              targetCard.dataset.confirmado = "1";
+
+              // Atualiza visual ANTES de fechar ou permitir fechar o modal de sucesso
+              statusBadge.innerHTML = `
     <span style="
       background:#4CAF50;
       color:white;
@@ -2214,61 +2214,165 @@ if (roomEl) {
     </span>
   `;
 
-  statusBadge.classList.add("confirmed");
-  statusBadge.classList.remove("not-confirmed");
+              statusBadge.classList.add("confirmed");
+              statusBadge.classList.remove("not-confirmed");
 
-  // Remove o botão de confirmar do card
-  const btn = targetCard.querySelector(".confirm-appointment-btn");
-  if (btn) btn.remove();
+              // Remove o botão de confirmar do card
+              const btn = targetCard.querySelector(".confirm-appointment-btn");
+              if (btn) btn.remove();
 
-// ===========================================
-// 🔹 GERAR A GUIA AQUI — LOCAL CORRETO
-// ===========================================
+              // ===========================================
+              // 🔹 GERAR A GUIA AQUI — LOCAL CORRETO
+              // ===========================================
 
-try {
-    console.log("📤 Enviando dados para gerar a guia...");
+              try {
+                console.log("📤 Enviando dados para gerar a guia...");
 
-    const gerarGuiaResponse = await fetch("ajax/gerar_guia_ajax.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            chave_beneficiario: Number(window.currentChaveBeneficiario),
-            executante: responseJson.dados_agendamento.nome_profissional,
-            solicitante: responseJson.dados_agendamento.nome_profissional,
-            id_unidade: responseJson.dados_agendamento.id_local_atendimento,
-            nome_especialidade: responseJson.dados_agendamento.nome_especialidade
-        })
-    });
+                const gerarGuiaResponse = await fetch("ajax/gerar_guia_ajax.php", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    chave_beneficiario: Number(window.currentChaveBeneficiario),
+                    executante: responseJson.dados_agendamento.nome_profissional,
+                    solicitante: responseJson.dados_agendamento.nome_profissional,
+                    id_unidade: responseJson.dados_agendamento.id_local_atendimento,
+                    nome_especialidade: responseJson.dados_agendamento.nome_especialidade
+                  })
+                });
 
-    const guiaJson = await gerarGuiaResponse.json();
-    console.log("Retorno da geração de guia:", guiaJson);
+                const guiaJson = await gerarGuiaResponse.json();
+                console.log("Retorno da geração de guia:", guiaJson);
 
-    if (!guiaJson.sucesso && guiaJson.statusCode !== 200) {
-        console.error("Falha ao gerar guia!", guiaJson);
+                // ===========================
+                // 🔍 TRATAMENTO OFICIAL DA RESPOSTA DA API DE GUIA
+                // ===========================
 
-        await Swal.fire({
-            icon: "warning",
-            title: "Guia não gerada",
-            text: "O agendamento foi confirmado, mas não foi possível gerar a guia."
-        });
-    }
+                const statusCode = guiaJson.resposta_api?.STATUS_CODE;
+                const mensagem = guiaJson.resposta_api?.MENSAGEM;
+                const numeroGuia = guiaJson.resposta_api?.NUMERO_GUIA;
 
-} catch (erroGuia) {
-    console.error("ERRO AO GERAR GUIA:", erroGuia);
-}
-  
-  // Agora sim, modal final (já com card 100% atualizado)
-  // await Swal.fire({
-  //   icon: "success",
-  //   title: "Sucesso!",
-  //   text: "Agendamento confirmado!",
-  //   timer: 2000,
-  //   showConfirmButton: false
-  // });
+                const api = guiaJson.resposta_api || {};
 
-  // Vai para a tela de confirmação
-  showScreen('confirmation');
-}
+                console.log("🔎 STATUS_CODE:", api.STATUS_CODE);
+                console.log("🔎 Mensagem:", api.MENSAGEM || "");
+                console.log("🔎 Número da Guia:", api.NUMERO_GUIA || null);
+
+
+                // ===========================
+                // 🎯 G200 → GUIA GERADA COM SUCESSO
+                // ===========================
+                if (statusCode === "G200") {
+
+                  await Swal.fire({
+                    icon: "success",
+                    title: "Presença confirmada!",
+                    html: `
+        <p style="font-size:1.2rem; margin-top:10px;">
+            Sua presença foi registrada e você já está na fila para o atendimento.
+        </p>
+        <p style="font-size:1rem; margin-top:5px;">
+            Por favor, aguarde ser chamado(a).
+        </p>
+    `,
+                    confirmButtonText: "OK",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                  });
+
+
+                  console.log("🟢 Guia gerada com sucesso:", numeroGuia);
+                  return;
+                }
+
+
+                // ===========================
+                // ⚠️ CC502 → CONTRATO CANCELADO
+                // ===========================
+                if (statusCode === "CC502") {
+
+                  await Swal.fire({
+                    icon: "warning",
+                    title: "Contrato cancelado",
+                    text: "O atendimento não pode prosseguir pois o contrato do beneficiário está cancelado.",
+                  });
+
+                  console.warn("⚠️ Contrato cancelado:", mensagem);
+                  return;
+                }
+
+
+                // ===========================
+                // 🔐 G401 → TOKEN INVÁLIDO / NÃO AUTORIZADO
+                // ===========================
+                if (statusCode === "G401") {
+
+                  await Swal.fire({
+                    icon: "error",
+                    title: "Erro de autenticação",
+                    text: "Falha no token da API. Contate o suporte.",
+                  });
+
+                  console.error("❌ Erro de autenticação na API de guia.");
+                  return;
+                }
+
+
+                // ===========================
+                // ❌ G500 → ERRO DE REGRA / BENEFICIÁRIO MIGRADO SEM CONTRATO
+                // ===========================
+                if (statusCode === "G500") {
+
+                  const erros = guiaJson.ERROS ? guiaJson.ERROS.join("<br>") : "Erro não especificado";
+
+                  await Swal.fire({
+                    icon: "error",
+                    title: "Erro ao gerar guia",
+                    html: erros,
+                  });
+
+                  console.error("❌ Erros retornados pela API:", erros);
+                  return;
+                }
+
+
+                // ===========================
+                // 🤷 STATUS DESCONHECIDO
+                // ===========================
+                console.warn("⚠️ Status inesperado retornado pela API:", statusCode);
+
+                await Swal.fire({
+                  icon: "info",
+                  title: "Retorno não esperado",
+                  text: `Código de status: ${statusCode}`,
+                });
+
+
+                if (!guiaJson.sucesso && guiaJson.statusCode !== 200) {
+                  console.error("Falha ao gerar guia!", guiaJson);
+
+                  await Swal.fire({
+                    icon: "warning",
+                    title: "Guia não gerada",
+                    text: "O agendamento foi confirmado, mas não foi possível gerar a guia."
+                  });
+                }
+
+              } catch (erroGuia) {
+                console.error("ERRO AO GERAR GUIA:", erroGuia);
+              }
+
+              // Agora sim, modal final (já com card 100% atualizado)
+              // await Swal.fire({
+              //   icon: "success",
+              //   title: "Sucesso!",
+              //   text: "Agendamento confirmado!",
+              //   timer: 2000,
+              //   showConfirmButton: false
+              // });
+
+              // Vai para a tela de confirmação
+              showScreen('confirmation');
+            }
 
           });
         } else {
@@ -2555,3 +2659,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+document.addEventListener("click", function (e) {
+    if (e.target.closest("#btn-sair")) {
+        window.location.href = "entrada.php";
+    }
+});
+

@@ -231,14 +231,22 @@ function obterHoraAtual()
             <!-- Tela de Agendamentos -->
             <div id="appointments-screen" class="screen">
                 <div class="appointments-content">
-                    <button class="back-btn">
-                        <i class="fas fa-arrow-left"></i> Voltar
-                    </button>
+
+                    <div class="header-bar">
+                        <button class="back-btn header-btn">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </button>
+
+                        <button id="btn-sair" class="exit-btn header-btn">
+                            Sair <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
 
                     <h2>Seus Agendamentos</h2>
                     <p class="patient-name">
                         Bem-vindo(a), <span id="patient-name"></span>
                     </p>
+
 
                     <!-- Loader enquanto a API carrega -->
                     <div id="loading-inline" class="loading-inline" style="display: flex;">
