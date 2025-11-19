@@ -16,19 +16,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 try {
 
-    // Lê o corpo JSON enviado pelo front-end
-    $inputData = json_decode(file_get_contents("php://input"), true);
+    // PHP 5.3 não aceita json_decode(null) com operador ??
+    $rawInput = file_get_contents("php://input");
+    $inputData = json_decode($rawInput, true);
 
-    if (!$inputData) {
+    if (!$inputData || !is_array($inputData)) {
         throw new Exception("JSON inválido ou ausente no corpo da requisição.");
     }
 
-    // Campos recebidos
-    $chaveBeneficiario  = $inputData['chave_beneficiario']  ?? '';
-    $executante         = $inputData['executante']          ?? '';
-    $solicitante        = $inputData['solicitante']         ?? '';
-    $idUnidade          = $inputData['id_unidade']          ?? '';
-    $especialidade      = $inputData['nome_especialidade']  ?? '';
+    // Recuperação dos campos com validação PHP 5.3
+    $chaveBeneficiario = isset($inputData['chave_beneficiario']) ? $inputData['chave_beneficiario'] : '';
+    $executante        = isset($inputData['executante']) ? $inputData['executante'] : '';
+    $solicitante       = isset($inputData['solicitante']) ? $inputData['solicitante'] : '';
+    $idUnidade         = isset($inputData['id_unidade']) ? $inputData['id_unidade'] : '';
+    $especialidade     = isset($inputData['nome_especialidade']) ? $inputData['nome_especialidade'] : '';
 
     // ===== VALIDAÇÕES OBRIGATÓRIAS =====
     if (
@@ -46,7 +47,7 @@ try {
     }
 
     // ===== MONTAGEM DO JSON ENVIADO =====
-    $bodyArray = [
+    $bodyArray = array(
         "id"             => (int)$chaveBeneficiario,
         "executante"     => $executante,
         "solicitante"    => $solicitante,
@@ -73,34 +74,31 @@ try {
         "atendimentoRN"      => "N",
         "tipoAtendimento"    => "4",
 
-        // PROCEDIMENTO FIXO
-        "procedimentos" => [
-            [
+        "procedimentos" => array(
+            array(
                 "codigo"     => "10101012",
                 "quantidade" => 1,
                 "dente"      => null,
                 "face"       => null
-            ]
-        ]
-    ];
+            )
+        )
+    );
 
-    $bodyJson = json_encode($bodyArray, JSON_UNESCAPED_UNICODE);
+    $bodyJson = json_encode($bodyArray);
 
     // ===== CHAMADA cURL =====
     $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL            => $API_URL,
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $bodyJson,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => [
-            'Content-Type: application/json',
-            'X-API-KEY: ' . $API_KEY
-        ],
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => 0,
-        CURLOPT_TIMEOUT        => 30
-    ]);
+    curl_setopt($ch, CURLOPT_URL, $API_URL);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $bodyJson);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        'Content-Type: application/json',
+        'X-API-KEY: ' . $API_KEY
+    ));
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
     $response  = curl_exec($ch);
     $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -108,30 +106,30 @@ try {
     curl_close($ch);
 
     if ($curlError) {
-        throw new Exception("Erro na requisição cURL: $curlError");
+        throw new Exception("Erro na requisição cURL: " . $curlError);
     }
 
-    // Decodifica resposta
     $responseData = json_decode($response, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        throw new Exception("Erro ao decodificar JSON da API.");
+
+    if (!$responseData) {
+        throw new Exception("Erro ao decodificar JSON da API. Resposta recebida: " . $response);
     }
 
-    // ===== RETORNO FINAL (com debug estruturado) =====
-    echo json_encode([
+    // ===== RETORNO =====
+    echo json_encode(array(
         "sucesso"        => true,
         "statusCode"     => $httpCode,
         "resposta_api"   => $responseData,
         "debug_request"  => $bodyArray
-    ]);
+    ));
 
 } catch (Exception $e) {
 
     http_response_code(500);
 
-    echo json_encode([
+    echo json_encode(array(
         "sucesso"       => false,
         "erro"          => $e->getMessage(),
-        "debug_request" => $inputData ?? null
-    ]);
+        "debug_request" => isset($inputData) ? $inputData : null
+    ));
 }
