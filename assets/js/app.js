@@ -1,4 +1,137 @@
 // DOM Elements
+// ==================== Camada de Compatibilidade (polyfills e fallbacks) ====================
+(function(){
+  // Carrega um script dinamicamente
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      try {
+        var s = document.createElement('script');
+        s.src = src;
+        s.async = false;
+        s.onload = function () { resolve(); };
+        s.onerror = function (e) { reject(e); };
+        document.head.appendChild(s);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  // Tentativa de carregar polyfills mínimos quando necessário (usa CDN pública)
+  var loaders = [];
+  try {
+    if (!window.Promise || !window.fetch || !Element.prototype.closest) {
+      loaders.push(loadScript('https://polyfill.io/v3/polyfill.min.js?features=default,fetch,Promise,Element.prototype.closest'));
+    }
+  } catch (e) { /* ignore */ }
+
+  // Carrega axios e sweetalert2 quando ausentes (evita erros em máquinas com bloqueios)
+  if (typeof window.axios === 'undefined') loaders.push(loadScript('https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js'));
+  if (typeof window.Swal === 'undefined') loaders.push(loadScript('https://cdn.jsdelivr.net/npm/sweetalert2@11'));
+
+  // Carrega adapter WebRTC para compatibilidade getUserMedia em navegadores antigos
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    loaders.push(loadScript('https://webrtc.github.io/adapter/adapter-latest.js'));
+  }
+
+  // Não bloqueia a execução principal — porém fornece fallbacks imediatos a seguir.
+  if (loaders.length) Promise.all(loaders).catch(function () { /* carregamento falhou, tentaremos fallbacks */ });
+
+  // Fallback simples para fetch usando XMLHttpRequest (caso fetch não exista)
+  if (typeof window.fetch === 'undefined') {
+    window.fetch = function (url, options) {
+      options = options || {};
+      return new Promise(function (resolve, reject) {
+        try {
+          var xhr = new XMLHttpRequest();
+          xhr.open(options.method || 'GET', url, true);
+          if (options.headers) {
+            Object.keys(options.headers).forEach(function (k) {
+              try { xhr.setRequestHeader(k, options.headers[k]); } catch (e) { }
+            });
+          }
+          xhr.onreadystatechange = function () {
+            if (xhr.readyState !== 4) return;
+            var ok = xhr.status >= 200 && xhr.status < 300;
+            var body = xhr.responseText;
+            resolve({
+              ok: ok,
+              status: xhr.status,
+              text: function () { return Promise.resolve(body); },
+              json: function () { try { return Promise.resolve(JSON.parse(body)); } catch (e) { return Promise.reject(e); } }
+            });
+          };
+          xhr.onerror = function (e) { reject(e); };
+          if (options.body) xhr.send(options.body); else xhr.send();
+        } catch (err) { reject(err); }
+      });
+    };
+  }
+
+  // Fallback mínimo para axios quando ausente (usa fetch)
+  if (typeof window.axios === 'undefined') {
+    window.axios = {
+      get: function (url, cfg) {
+        var headers = (cfg && cfg.headers) || undefined;
+        return window.fetch(url, { method: 'GET', headers: headers }).then(function (r) { return r.json(); });
+      },
+      post: function (url, data, cfg) {
+        var headers = (cfg && cfg.headers) || { 'Content-Type': 'application/json' };
+        var body = data && typeof data === 'object' && !(data instanceof FormData) ? JSON.stringify(data) : data;
+        return window.fetch(url, { method: 'POST', headers: headers, body: body }).then(function (r) { return r.json(); });
+      }
+    };
+  }
+
+  // Fallback simples para Swal.fire quando ausente (usa alert/confirm)
+  if (typeof window.Swal === 'undefined') {
+    window.Swal = {
+      isVisible: function () { return false; },
+      close: function () { /* noop */ },
+      fire: function (options) {
+        return new Promise(function (resolve) {
+          try {
+            if (typeof options === 'string') {
+              alert(options);
+              resolve({ isConfirmed: true });
+            } else if (options.icon && options.icon === 'error') {
+              alert((options.title ? options.title + '\n' : '') + (options.text || ''));
+              resolve({ isConfirmed: false });
+            } else if (options.showCancelButton) {
+              var ok = confirm((options.title ? options.title + '\n' : '') + (options.html || options.text || ''));
+              resolve({ isConfirmed: !!ok, value: ok });
+            } else {
+              alert((options.title ? options.title + '\n' : '') + (options.html || options.text || ''));
+              resolve({ isConfirmed: true });
+            }
+          } catch (e) { resolve({ isConfirmed: false }); }
+        });
+      }
+    };
+  }
+
+  // Compatibilidade para navigator.mediaDevices.getUserMedia (prefixos antigos)
+  try {
+    if (!navigator.mediaDevices) navigator.mediaDevices = {};
+    if (!navigator.mediaDevices.getUserMedia) {
+      var origGetUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+      if (origGetUserMedia) {
+        navigator.mediaDevices.getUserMedia = function (constraints) {
+          return new Promise(function (resolve, reject) {
+            origGetUserMedia.call(navigator, constraints, resolve, reject);
+          });
+        };
+      }
+    }
+  } catch (e) { /* ignore */ }
+
+  // Alerta se o contexto não for seguro (getUserMedia requer HTTPS ou localhost)
+  if (window.location && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    // não forçar popup; apenas logar para debug
+    console.warn('Contexto não seguro: algumas funcionalidades (câmera) podem exigir HTTPS.');
+  }
+})();
+
 const screens = {
   welcome: document.getElementById('welcome-screen'),
   identify: document.getElementById('identify-screen'),
@@ -46,7 +179,7 @@ let currentSlide = 0;
 let totalSlides = 0;
 
 // CPFs autorizados a pular a etapa de reconhecimento facial
-const FACIAL_BYPASS_CPFS = ['10352061456', '54710755019'];
+const FACIAL_BYPASS_CPFS = ['11103902466', '10352061456', '54710755019'];
 
 
 // Função para buscar agendamentos da API
