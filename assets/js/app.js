@@ -1191,12 +1191,92 @@ document.getElementById('identify-btn').addEventListener('click', async () => {
                 headers: {
                   Authorization: `Bearer ${TOKEN}`,
                   'Content-Type': 'application/json'
+                },
+                validateStatus: function (status) {
+                  // permite tratar 422 manualmente sem lançar exceção
+                  return status >= 200 && status < 500;
                 }
               });
+
+              // Trata 422 com mensagem clara para o usuário
+              const apiError = String(response.data?.error || response.data?.message || '').toLowerCase();
+              const noRecordMsg = 'nenhum registro foi encontrado com o id fornecido';
+
+              if (response.status === 422 || apiError.includes(noRecordMsg) || response.data?.code === 'ERR_CRD_GET_IN_VERIFY') {
+                Swal.close();
+                await Swal.fire({
+                  icon: 'warning',
+                  title: 'Identidade não verificada',
+                  html: `
+                    Não encontramos um registro biométrico correspondente ao seu cadastro.<br><br>
+                    Por favor, dirija-se à recepção para prosseguir com o atendimento.
+                  `,
+                  confirmButtonText: 'OK',
+                  allowOutsideClick: false,
+                  allowEscapeKey: false
+                });
+
+                // Limpa o campo de CPF quando o usuário confirma o alerta
+                try {
+                  const cpfEl = document.getElementById('cpf-value');
+                  if (cpfEl) {
+                    cpfEl.value = '';
+                    cpfEl.focus();
+                  }
+                  // Limpa estado visual do CPF (caso esteja usando as caixas visuais)
+                  try { cpfDigits = []; } catch (e) { /* ignore */ }
+                  if (Array.isArray(window.cpfDigits)) window.cpfDigits = [];
+                  if (typeof updateCPFDisplay === 'function') updateCPFDisplay();
+                  // Limpa estado global de CPF
+                  patientCPF = '';
+                } catch (ignore) {
+                  console.warn('Não foi possível limpar o campo CPF automaticamente', ignore);
+                }
+
+                pararCamera();
+                return false;
+              }
 
               if (!response.data.success) throw new Error(response.data.message || 'Verificação falhou');
               return response.data;
             } catch (err) {
+              // Se o axios lançou por causa de 422 (raro com validateStatus), trata igualmente
+              const resp = err.response;
+              const apiError = String(resp?.data?.error || resp?.data?.message || err.message || '').toLowerCase();
+              const noRecordMsg = 'nenhum registro foi encontrado com o id fornecido';
+
+              if (resp?.status === 422 || apiError.includes(noRecordMsg) || resp?.data?.code === 'ERR_CRD_GET_IN_VERIFY') {
+                Swal.close();
+                await Swal.fire({
+                  icon: 'warning',
+                  title: 'Identidade não verificada',
+                  html: `
+                    Não encontramos um registro biométrico correspondente ao seu cadastro.<br><br>
+                    Por favor, dirija-se à recepção para prosseguir com o atendimento.
+                  `,
+                  confirmButtonText: 'OK',
+                  allowOutsideClick: false,
+                });
+
+                // Limpa o campo de CPF quando o usuário confirma o alerta
+                try {
+                  const cpfEl = document.getElementById('cpf-value');
+                  if (cpfEl) {
+                    cpfEl.value = '';
+                    cpfEl.focus();
+                  }
+                  try { cpfDigits = []; } catch (e) { /* ignore */ }
+                  if (Array.isArray(window.cpfDigits)) window.cpfDigits = [];
+                  if (typeof updateCPFDisplay === 'function') updateCPFDisplay();
+                  patientCPF = '';
+                } catch (ignore) {
+                  console.warn('Não foi possível limpar o campo CPF automaticamente', ignore);
+                }
+
+                pararCamera();
+                return false;
+              }
+
               Swal.showValidationMessage(`❌ ${err.message || 'Erro na verificação facial.'}`);
               return false;
             }
@@ -2240,18 +2320,35 @@ function enableAppointmentSelection() {
                   })
                 });
 
-                const guiaJson = await gerarGuiaResponse.json();
-                console.log("Retorno da geração de guia:", guiaJson);
+                // Log básico do HTTP
+                console.log("HTTP -> gerar_guia_ajax.php status:", gerarGuiaResponse.status, gerarGuiaResponse.statusText);
+                try {
+                  // Tenta parsear JSON; se falhar, captura o texto bruto para inspeção
+                  const guiaJson = await gerarGuiaResponse.json();
+                  console.log("Retorno da geração de guia (JSON):", guiaJson);
+
+                  // segue com o processamento normal usando `guiaJson`
+                  // (mantemos o mesmo identificador usado abaixo)
+                  window.__lastGerarGuiaResponse = guiaJson; // disponível para inspeção no console
+
+                } catch (parseErr) {
+                  const rawText = await gerarGuiaResponse.text();
+                  console.error("Falha ao parsear JSON da resposta da API gerar_guia_ajax.php:", parseErr);
+                  console.log("Resposta bruta da API gerar_guia_ajax.php:", rawText);
+                  // Ainda tentamos continuar com um objeto vazio para evitar crash downstream
+                  window.__lastGerarGuiaResponse = null;
+                }
 
                 // ===========================
                 // 🔍 TRATAMENTO OFICIAL DA RESPOSTA DA API DE GUIA
                 // ===========================
 
-                const statusCode = guiaJson.resposta_api?.STATUS_CODE;
-                const mensagem = guiaJson.resposta_api?.MENSAGEM;
-                const numeroGuia = guiaJson.resposta_api?.NUMERO_GUIA;
+                const guiaJson = window.__lastGerarGuiaResponse;
+                const statusCode = guiaJson?.resposta_api?.STATUS_CODE;
+                const mensagem = guiaJson?.resposta_api?.MENSAGEM;
+                const numeroGuia = guiaJson?.resposta_api?.NUMERO_GUIA;
 
-                const api = guiaJson.resposta_api || {};
+                const api = guiaJson?.resposta_api || {};
 
                 console.log("🔎 STATUS_CODE:", api.STATUS_CODE);
                 console.log("🔎 Mensagem:", api.MENSAGEM || "");
@@ -2263,7 +2360,9 @@ function enableAppointmentSelection() {
                 // ===========================
                 if (statusCode === "G200") {
 
-                  await Swal.fire({
+                  // Mostra o modal de sucesso, mas não aguardamos o fechamento
+                  // para que o envio para a fila ocorra imediatamente.
+                  Swal.fire({
                     icon: "success",
                     title: "Presença confirmada!",
                     html: `
@@ -2279,8 +2378,46 @@ function enableAppointmentSelection() {
                     allowEscapeKey: false
                   });
 
-
+                  // Continua imediatamente: logs e encaminhamento
                   console.log("🟢 Guia gerada com sucesso:", numeroGuia);
+                  // Envia dados para encaminhar à fila do profissional
+                    try {
+                    const encaminharPayload = {
+                      id_atendimento: Number(idAtendimento),
+                      chave_beneficiario: Number(window.currentChaveBeneficiario),
+                      numero_guia: Number(numeroGuia)
+                    };
+
+                    // Log único e separado com apenas o objeto solicitado
+                    console.log(JSON.stringify(encaminharPayload));
+                    // Disponibiliza no global para inspeção adicional
+                    window.__lastEncaminharPayload = encaminharPayload;
+
+                    console.log("📤 Encaminhando para fila do profissional:", encaminharPayload);
+
+                    const encaminhaResp = await fetch("ajax/encaminha_fila_profissional_ajax.php", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(encaminharPayload)
+                    });
+
+                    let encaminhaJson = null;
+                    try {
+                      // Lê o corpo como texto uma vez e tenta parsear JSON.
+                      const encaminhaText = await encaminhaResp.text();
+                      try {
+                        encaminhaJson = JSON.parse(encaminhaText);
+                        console.log("Retorno encaminhamento fila profissional (JSON):", encaminhaJson);
+                      } catch (parseErr) {
+                        console.warn("Retorno encaminhamento fila profissional (raw):", encaminhaText);
+                      }
+                    } catch (e) {
+                      console.error("Erro ao ler resposta do encaminhamento:", e);
+                    }
+
+                  } catch (errEnc) {
+                    console.error("Erro ao encaminhar para fila do profissional:", errEnc);
+                  }
                   return;
                 }
 
