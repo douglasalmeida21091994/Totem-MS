@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Totem Auto Atendimento - Clínica Mais Saúde
  * Sistema integrado com API Smile Saúde
@@ -9,14 +10,16 @@ header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
 // Funções auxiliares úteis
-function formatarCPF($cpf) {
+function formatarCPF($cpf)
+{
     $cpf = preg_replace('/\D/', '', $cpf);
     if (strlen($cpf) == 11) {
         return substr($cpf, 0, 3) . '.' . substr($cpf, 3, 3) . '.' . substr($cpf, 6, 3) . '-' . substr($cpf, 9, 2);
     }
     return $cpf;
 }
-function validarCPF($cpf) {
+function validarCPF($cpf)
+{
     $cpf = preg_replace('/\D/', '', $cpf);
     if (strlen($cpf) != 11) return false;
     if (preg_match('/(\d)\1{10}/', $cpf)) return false;
@@ -30,8 +33,14 @@ function validarCPF($cpf) {
     return true;
 }
 // Data e hora para exibição inicial
-function obterDataAtual() { return date('d/m/Y'); }
-function obterHoraAtual() { return date('H:i:s'); }
+function obterDataAtual()
+{
+    return date('d/m/Y');
+}
+function obterHoraAtual()
+{
+    return date('H:i:s');
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -83,33 +92,47 @@ function obterHoraAtual() { return date('H:i:s'); }
                             <span>Check-in de Consulta</span>
                         </button>
 
-                        <button class="option-btn" data-option="Exame">
-                            <div class="ticket-icon-container">
-                                <i class="fas fa-microscope"></i>
-                            </div>
-                            <span>Check-in de Exame</span>
-                        </button>
+                        <div class="option-btn-inativo">
+                            <button class="option-btn inativo-card" data-option="Exame">
+                                <div class="ticket-icon-container">
+                                    <i class="fas fa-microscope"></i>
+                                </div>
+                                <span>Check-in de Exame</span>
+                            </button>
+                            <div class="em-breve-text">EM BREVE</div>
+                        </div>
 
-                        <button class="option-btn" data-option="Terapia">
-                            <div class="ticket-icon-container">
-                                <i class="fas fa-hands-helping"></i>
-                            </div>
-                            <span>Check-in de Terapia</span>
-                        </button>
+                        <div class="option-btn-inativo">
+                            <button class="option-btn inativo-card" data-option="Terapia">
+                                <div class="ticket-icon-container">
+                                    <i class="fas fa-hands-helping"></i>
+                                </div>
+                                <span>Check-in de Terapia</span>
+                            </button>
+                            <div class="em-breve-text">EM BREVE</div>
+                        </div>
 
-                        <button class="option-btn" data-option="Pronto atendimento">
-                            <div class="ticket-icon-container">
-                                <i class="fa-solid fa-hospital"></i>
-                            </div>
-                            <span>Pronto Atendimento</span>
-                        </button>
+                        <div class="option-btn-inativo">
+                            <button class="option-btn inativo-card" data-option="Pronto atendimento">
+                                <div class="ticket-icon-container">
+                                    <i class="fa-solid fa-hospital"></i>
+                                </div>
+                                <span>Pronto Atendimento</span>
+                            </button>
+                            <div class="em-breve-text">EM BREVE</div>
+                        </div>
 
-                        <button class="option-btn" data-option="senha">
-                            <div class="ticket-icon-container">
-                                <i class="fas fa-ticket"></i>
-                            </div>
-                            <span>Retirar Senha Digital</span>
-                        </button>
+                        <div class="option-btn-inativo">
+                            <button class="option-btn inativo-card" data-option="senha">
+                                <div class="ticket-icon-container">
+                                    <i class="fas fa-ticket"></i>
+                                </div>
+                                <span>Retirar Senha Digital</span>
+                            </button>
+                            <div class="em-breve-text">EM BREVE</div>
+                        </div>
+
+
                     </div>
                 </div>
             </div>
@@ -208,14 +231,22 @@ function obterHoraAtual() { return date('H:i:s'); }
             <!-- Tela de Agendamentos -->
             <div id="appointments-screen" class="screen">
                 <div class="appointments-content">
-                    <button class="back-btn">
-                        <i class="fas fa-arrow-left"></i> Voltar
-                    </button>
+
+                    <div class="header-bar">
+                        <button class="back-btn header-btn">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </button>
+
+                        <button id="btn-sair" class="exit-btn header-btn">
+                            Sair <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
 
                     <h2>Seus Agendamentos</h2>
                     <p class="patient-name">
                         Bem-vindo(a), <span id="patient-name"></span>
                     </p>
+
 
                     <!-- Loader enquanto a API carrega -->
                     <div id="loading-inline" class="loading-inline" style="display: flex;">
@@ -290,7 +321,7 @@ function obterHoraAtual() { return date('H:i:s'); }
                         <p><i class="fas fa-user-md detail-icon"></i> <strong id="label-professional">Profissional:</strong> <span id="confirm-professional"></span></p>
                         <p><i class="fas fa-heartbeat detail-icon"></i> <strong>Especialidade:</strong> <span id="confirm-specialty"></span></p>
                         <p><i class="fas fa-clock detail-icon"></i> <strong>Horário:</strong> <span id="confirm-time"></span></p>
-                        <p><i class="fas fa-door-open detail-icon"></i> <strong>Sala:</strong> <span id="confirm-room"></span></p>
+                        <!-- <p><i class="fas fa-door-open detail-icon"></i> <strong>Sala:</strong> <span id="confirm-room"></span></p> -->
                         <!-- <div id="confirmation-status" class="confirmation-status"></div> -->
                     </div>
 
@@ -425,7 +456,7 @@ function obterHoraAtual() { return date('H:i:s'); }
                                     <path fill="#25D366" d="M4.868 43.132L7.6 34.32A19.9 19.9 0 013.9 23.93C3.9 12.29 13.29 2.9 24.93 2.9S45.9 12.29 45.9 23.93 36.51 44.9 24.87 44.9c-3.77 0-7.43-.98-10.67-2.83l-9.33 1.06z" />
                                     <path fill="#FFF" d="M35.28 28.52c-.59-.3-3.48-1.72-4.02-1.92-.54-.2-.94-.3-1.33.3-.39.59-1.53 1.92-1.88 2.31-.34.39-.69.44-1.28.15-.59-.3-2.48-.91-4.73-2.9-1.75-1.56-2.93-3.48-3.27-4.06-.34-.59-.04-.91.26-1.2.27-.27.59-.69.89-1.03.3-.34.39-.59.59-.98.2-.39.1-.73-.05-1.03-.15-.3-1.33-3.21-1.83-4.4-.48-1.15-.97-.99-1.33-1.01-.34-.02-.73-.02-1.13-.02-.39 0-1.03.15-1.58.73-.54.59-2.07 2.02-2.07 4.92 0 2.9 2.12 5.7 2.41 6.09.3.39 4.17 6.37 10.1 8.94 1.41.61 2.51.97 3.37 1.25 1.41.45 2.69.39 3.7.23 1.13-.17 3.48-1.42 3.97-2.8.49-1.37.49-2.54.34-2.8-.15-.27-.54-.44-1.13-.73z" />
                                 </svg></span></strong></h3>
-                    <p>Escaneie o QR Code para iniciar uma conversa</p>
+                    <p>Escaneie o QR Code para iniciar uma conversa.</p>
                 </div>
             </div>
         </footer>

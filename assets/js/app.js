@@ -17,7 +17,7 @@ const confirmPatientNameElement = document.getElementById('confirm-patient-name'
 const confirmServiceTypeElement = document.getElementById('confirm-service-type');
 const confirmProfessionalElement = document.getElementById('confirm-professional');
 const confirmSpecialtyElement = document.getElementById('confirm-specialty');
-const confirmTimeElement = document.getElementById('confirm-time');
+const confirmTimeElement = document.getElementById("confirm-time");
 const confirmRoomElement = document.getElementById('confirm-room');
 const appointmentsList = document.getElementById('appointments-list');
 const cpfInput = document.getElementById('cpf-value');
@@ -38,17 +38,17 @@ let patientCPF = '';
 let selectedAppointment = null;
 let inactivityTimer = null;
 let selectedTicketType = ''; // guarda o tipo de senha digital (Atendimento Geral, etc)
-let currentChaveBeneficiario = null;
+window.currentChaveBeneficiario = null;
+let appointments = []; // Declarar appointments como variável global
 
 // Variáveis do carrossel
 let currentSlide = 0;
 let totalSlides = 0;
 
 // CPFs autorizados a pular a etapa de reconhecimento facial
-const FACIAL_BYPASS_CPFS = ['11103902466', '10352061456', '54710755019'];
+const FACIAL_BYPASS_CPFS = ['10352061456', '54710755019'];
 
 
-// Função para buscar agendamentos da API
 // Função para buscar agendamentos da API
 async function fetchAppointments(cpf) {
   try {
@@ -78,7 +78,7 @@ async function fetchAppointments(cpf) {
     const chaveBeneficiario = authData.chave_beneficiario;
     if (!chaveBeneficiario) throw new Error('Não foi possível identificar a chave do beneficiário.');
 
-    currentChaveBeneficiario = chaveBeneficiario;
+    window.currentChaveBeneficiario = chaveBeneficiario;
 
     console.log('Buscando agendamentos para chave do beneficiário:', chaveBeneficiario);
 
@@ -133,6 +133,7 @@ async function fetchAppointments(cpf) {
     });
 
     console.log('Agendamentos mapeados:', JSON.stringify(agendamentosMapeados, null, 2));
+    appointments = agendamentosMapeados; // Atribuir ao array global
     return agendamentosMapeados;
 
   } catch (error) {
@@ -427,14 +428,14 @@ async function renderAppointments(cpf) {
                     ${sortedAppointments.map((appointment, index) => `
                         <div class="appointment-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
                             <div class="appointment-card ${appointment.status.toLowerCase()}" data-id="${appointment.id}">
-                                <div class="appointment-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                                    <div class="appointment-time" style="display: flex; align-items: center; gap: 8px;">
-                                        <i class="far fa-clock"></i>
+                                <div class="appointment-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: nowrap; gap: 15px;">
+                                    <div class="appointment-time" style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+                                        <i class="far fa-clock" style="color: black !important; min-width: 16px;"></i>
                                         <span>${appointment.time} às ${appointment.endTime}</span>
-                                        ${appointment.type ? `<span style="background: rgba(0, 0, 0, 0.1); color: #333; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; white-space: nowrap;">${appointment.type}</span>` : ''}
                                     </div>
-                                    <div class="appointment-date" style="display: flex; align-items: center; gap: 4px; margin-left: auto;">
-                                        <i class="far fa-calendar-alt"></i>
+                                    ${appointment.type ? `<span style="background: rgba(0, 0, 0, 0.1); color: #333; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; white-space: nowrap; margin-right: auto;">${appointment.type}</span>` : '<span style="flex-grow: 1;"></span>'}
+                                    <div class="appointment-date" style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+                                        <i class="far fa-calendar-alt" style="min-width: 16px;"></i>
                                         <span>${appointment.date}</span>
                                     </div>
                                 </div>
@@ -641,18 +642,37 @@ function enableTouchAppointmentSelection(appointments) {
       },
       buttonsStyling: false,
       allowOutsideClick: false
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        // Habilita o botão de confirmação global
-        if (confirmBtn) {
-          confirmBtn.disabled = false;
-          confirmBtn.style.opacity = '1';
+
+        const chave = currentChaveBeneficiario;
+        const confirmado = await confirmarAgendamentoReal(idAtendimento, chave, appointments);
+
+        if (!confirmado.sucesso) {
+          await Swal.fire({
+            icon: "error",
+            title: "Erro!",
+            text: "Não foi possível confirmar o agendamento.",
+          });
+          return;
         }
 
-        // Vai para a tela de confirmação
+
+
+        renderAppointments(patientCPF);
+
+        await Swal.fire({
+          title: 'Sucesso!',
+          text: 'Agendamento confirmado com sucesso!',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        });
+
+        updateConfirmationScreen();
         showScreen('confirmation');
       }
     });
+
   }
 
   // Adiciona eventos para cada card
@@ -740,6 +760,10 @@ function enableTouchAppointmentSelection(appointments) {
 
 // ====================== ATUALIZAÇÃO DA TELA DE CONFIRMAÇÃO ======================
 function updateConfirmationScreen() {
+
+  console.log("updateConfirmationScreen() recebeu:", selectedAppointment);
+  console.log("HORÁRIO recebido:", selectedAppointment?.horario);
+
   if (!selectedAppointment) return;
 
   // Dados do paciente e serviço
@@ -748,13 +772,8 @@ function updateConfirmationScreen() {
   if (confirmSpecialtyElement) confirmSpecialtyElement.textContent = selectedAppointment.especialidade || selectedAppointment.nome_especialidade || selectedAppointment.title || '—';
 
   // Formata o horário
-  if ((selectedAppointment.tipo || selectedAppointment.type) === 'Hora Marcada' && selectedAppointment.hora_inicio && selectedAppointment.hora_final) {
-    if (confirmTimeElement) confirmTimeElement.textContent = `${formatTime(selectedAppointment.hora_inicio)} - ${formatTime(selectedAppointment.hora_final)}`;
-  } else {
-    if (confirmTimeElement) confirmTimeElement.textContent = formatTime(selectedAppointment.horario || selectedAppointment.time || selectedAppointment.hora_inicio || '');
-  }
+  if (confirmTimeElement) confirmTimeElement.textContent = selectedAppointment.horario || "";
 
-  if (confirmRoomElement) confirmRoomElement.textContent = selectedAppointment.room || 'A ser definido';
 
   // Atualiza o status de confirmação
   const confirmationStatusElement = document.getElementById('confirmation-status');
@@ -859,7 +878,7 @@ document.getElementById('identify-form')?.addEventListener('submit', async (e) =
   if (inlineLoading) inlineLoading.style.display = 'flex'; // mostra o spinner dentro do card
 
 
-  clearTimeout(inactivityTimer); // 🚫 Pausa o retorno automático
+  clearTimeout(inactivityTimer); // Pausa o retorno automático
 
   try {
     await renderAppointments(cpf);
@@ -875,7 +894,7 @@ document.getElementById('identify-form')?.addEventListener('submit', async (e) =
     if (inlineLoading) inlineLoading.style.display = 'none'; // esconde o spinner interno
 
 
-    resetInactivityTimer(); // ♻️ Retoma o timer normal
+    resetInactivityTimer(); //  Retoma o timer normal
   }
 });
 
@@ -2050,13 +2069,21 @@ function enableAppointmentSelection() {
 
     // Quando clicar em Confirmar Agendamento
     if (confirmBtn) {
-      confirmBtn.addEventListener("click", (event) => {
+      confirmBtn.addEventListener("click", async (event) => {
         event.stopPropagation();
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Confirmando...";
 
         // Obtém os dados do agendamento
-        const idAtendimento = card.closest('.appointment-card')?.dataset.id || "";
+        const idAtendimento = card.dataset.id;
+
+        const appointment = appointments.find(a => a.id == idAtendimento);
+
+        console.log("🟢 APPOINTMENT no clique:", appointment);
+        console.log("🟢 HORÁRIO no clique:", appointment?.horario);
+
+
         const profissional = card.querySelector(".professional")?.innerText.replace("Profissional:", "").trim() || "—";
-        // Ajuste para pegar a especialidade corretamente
         const especialidadeElement = card.querySelector(".specialty");
         const especialidade = (especialidadeElement ?
           especialidadeElement.innerText.replace("Especialidade:", "").trim() :
@@ -2074,6 +2101,320 @@ function enableAppointmentSelection() {
           status
         });
 
+
+        // Chave do beneficiário
+        const chaveBeneficiario = window.currentChaveBeneficiario || null;
+
+        let resultado = false;
+        let mensagem = "";
+        let responseJson = null;
+
+        if (typeof Swal !== "undefined") {
+          Swal.fire({
+            title: 'Processando Confirmação...',
+            text: 'Por favor, aguarde.',
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+        }
+
+        try {
+          responseJson = await confirmarAgendamentoReal(idAtendimento, chaveBeneficiario, appointments);
+          resultado = responseJson?.sucesso === true;
+          mensagem = resultado ? "Agendamento confirmado com sucesso!" : (responseJson?.msg || "Não foi possível confirmar o agendamento.");
+        } catch (e) {
+          mensagem = "Erro ao confirmar: " + (e.message || e);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Espera 3 segundos
+
+        if (typeof Swal !== "undefined") {
+          Swal.close(); // Fecha o loading
+          Swal.fire({
+            icon: resultado ? "success" : "error",
+            title: resultado ? "Sucesso" : "Erro",
+            text: mensagem,
+            timer: 2500,
+            showConfirmButton: false,
+            didClose: async () => {
+
+              const ap = appointments.find(a => a.id == idAtendimento);
+
+              console.log("🟢 HORÁRIO dentro do didClose:", ap?.horario);
+
+
+              // Preencher modal de confirmação
+              if (responseJson?.dados_agendamento) {
+
+                // Nome do paciente
+                document.getElementById("confirm-patient-name").textContent =
+                  document.getElementById("patient-name").textContent;
+
+                // Serviço
+                document.getElementById("confirm-service-type").textContent =
+                  document.getElementById("service-type").textContent || "Consulta";
+
+                // Profissional
+                document.getElementById("confirm-professional").textContent =
+                  responseJson.dados_agendamento.nome_profissional || "";
+
+                // Especialidade
+                document.getElementById("confirm-specialty").textContent =
+                  responseJson.dados_agendamento.nome_especialidade || "";
+
+                // Horário → você já tem no objeto do card
+                const ap = appointments.find(a => a.id == idAtendimento);
+
+                document.getElementById("confirm-time").textContent = ap?.horario || "";
+
+                const roomEl = document.getElementById("confirm-room");
+                if (roomEl) {
+                  roomEl.textContent = responseJson.dados_agendamento.nome_local_atendimento || "";
+                }
+
+              }
+
+
+              if (!resultado) return;
+
+              // Log dos dados retornados
+              if (responseJson?.dados_agendamento) {
+                console.log("Dados do agendamento confirmado:", responseJson.dados_agendamento);
+              }
+
+              // Seleciona o card exato
+              const targetCard = document.querySelector(`.appointment-card[data-id="${idAtendimento}"]`);
+              if (!targetCard) return;
+
+              const statusBadge = targetCard.querySelector(".appointment-status");
+              if (!statusBadge) return;
+
+              // 🔄 Aguarda a réplica da Smile antes da atualização visual
+              await new Promise(resolve => setTimeout(resolve, 1200));
+
+              // Marca no DOM como confirmado
+              targetCard.dataset.confirmado = "1";
+
+              // Atualiza visual ANTES de fechar ou permitir fechar o modal de sucesso
+              statusBadge.innerHTML = `
+    <span style="
+      background:#4CAF50;
+      color:white;
+      padding:2px 8px;
+      border-radius:12px;
+      font-size:0.8em;
+      white-space:nowrap;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    ">
+      <i class="fas fa-check-circle"></i> Confirmado
+    </span>
+  `;
+
+              statusBadge.classList.add("confirmed");
+              statusBadge.classList.remove("not-confirmed");
+
+              // Remove o botão de confirmar do card
+              const btn = targetCard.querySelector(".confirm-appointment-btn");
+              if (btn) btn.remove();
+
+              // ===========================================
+              // 🔹 GERAR A GUIA AQUI — LOCAL CORRETO
+              // ===========================================
+
+              try {
+                console.log("📤 Enviando dados para gerar a guia...");
+
+                const gerarGuiaResponse = await fetch("ajax/gerar_guia_ajax.php", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    chave_beneficiario: Number(window.currentChaveBeneficiario),
+                    executante: responseJson.dados_agendamento.nome_profissional,
+                    solicitante: responseJson.dados_agendamento.nome_profissional,
+                    id_unidade: responseJson.dados_agendamento.id_local_atendimento,
+                    nome_especialidade: responseJson.dados_agendamento.nome_especialidade
+                  })
+                });
+
+                const guiaJson = await gerarGuiaResponse.json();
+                console.log("Retorno da geração de guia:", guiaJson);
+
+                // ===========================
+                // 🔍 TRATAMENTO OFICIAL DA RESPOSTA DA API DE GUIA
+                // ===========================
+
+                const statusCode = guiaJson.resposta_api?.STATUS_CODE;
+                const mensagem = guiaJson.resposta_api?.MENSAGEM;
+                const numeroGuia = guiaJson.resposta_api?.NUMERO_GUIA;
+
+                const api = guiaJson.resposta_api || {};
+
+                console.log("🔎 STATUS_CODE:", api.STATUS_CODE);
+                console.log("🔎 Mensagem:", api.MENSAGEM || "");
+                console.log("🔎 Número da Guia:", api.NUMERO_GUIA || null);
+
+
+                // ===========================
+                // 🎯 G200 → GUIA GERADA COM SUCESSO
+                // ===========================
+                if (statusCode === "G200") {
+
+                  await Swal.fire({
+                    icon: "success",
+                    title: "Presença confirmada!",
+                    html: `
+        <p style="font-size:1.2rem; margin-top:10px;">
+            Sua presença foi registrada e você já está na fila para o atendimento.
+        </p>
+        <p style="font-size:1rem; margin-top:5px;">
+            Por favor, aguarde ser chamado(a).
+        </p>
+    `,
+                    confirmButtonText: "OK",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                  });
+
+
+                  console.log("🟢 Guia gerada com sucesso:", numeroGuia);
+                  return;
+                }
+
+
+                // ===========================
+                // ⚠️ CC502 → CONTRATO CANCELADO
+                // ===========================
+                if (statusCode === "CC502") {
+
+                  await Swal.fire({
+                    icon: "warning",
+                    title: "Contrato cancelado",
+                    text: "O atendimento não pode prosseguir pois o contrato do beneficiário está cancelado.",
+                  });
+
+                  console.warn("⚠️ Contrato cancelado:", mensagem);
+                  return;
+                }
+
+
+                // ===========================
+                // 🔐 G401 → TOKEN INVÁLIDO / NÃO AUTORIZADO
+                // ===========================
+                if (statusCode === "G401") {
+
+                  await Swal.fire({
+                    icon: "error",
+                    title: "Erro de autenticação",
+                    text: "Falha no token da API. Contate o suporte.",
+                  });
+
+                  console.error("❌ Erro de autenticação na API de guia.");
+                  return;
+                }
+
+
+                // ===========================
+                // ❌ G500 → ERRO DE REGRA / BENEFICIÁRIO MIGRADO SEM CONTRATO
+                // ===========================
+                if (statusCode === "G500") {
+
+                  const erros = guiaJson.ERROS ? guiaJson.ERROS.join("<br>") : "Erro não especificado";
+
+                  await Swal.fire({
+                    icon: "error",
+                    title: "Erro ao gerar guia",
+                    html: erros,
+                  });
+
+                  console.error("❌ Erros retornados pela API:", erros);
+                  return;
+                }
+
+
+                // ===========================
+                // 🤷 STATUS DESCONHECIDO
+                // ===========================
+                console.warn("⚠️ Status inesperado retornado pela API:", statusCode);
+
+                await Swal.fire({
+                  icon: "info",
+                  title: "Retorno não esperado",
+                  text: `Código de status: ${statusCode}`,
+                });
+
+
+                if (!guiaJson.sucesso && guiaJson.statusCode !== 200) {
+                  console.error("Falha ao gerar guia!", guiaJson);
+
+                  await Swal.fire({
+                    icon: "warning",
+                    title: "Guia não gerada",
+                    text: "O agendamento foi confirmado, mas não foi possível gerar a guia."
+                  });
+                }
+
+              } catch (erroGuia) {
+                console.error("ERRO AO GERAR GUIA:", erroGuia);
+              }
+
+              // Agora sim, modal final (já com card 100% atualizado)
+              // await Swal.fire({
+              //   icon: "success",
+              //   title: "Sucesso!",
+              //   text: "Agendamento confirmado!",
+              //   timer: 2000,
+              //   showConfirmButton: false
+              // });
+
+              // Vai para a tela de confirmação
+              showScreen('confirmation');
+            }
+
+          });
+        } else {
+          alert(mensagem);
+          // Atualiza status visual do card se confirmado (para caso sem SweetAlert2)
+          if (resultado) {
+            if (responseJson && responseJson.dados_agendamento) {
+              console.log("Dados do agendamento confirmado:", responseJson.dados_agendamento);
+              console.log("🟡 HORÁRIO vindo do CARD no momento da confirmação:", appointment.horario);
+
+            }
+            const statusBadge = card.querySelector(".status-badge");
+            if (statusBadge) {
+              // esperar a réplica do backend da Smile
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              if (appointmentStatus === "1") {
+
+                // Grava o status no DOM — SEM DEPENDER DO ARRAY
+                targetCard.dataset.confirmado = "1";
+
+                statusBadge.innerText = "Confirmado";
+                statusBadge.classList.add("confirmed");
+                statusBadge.classList.remove("not-confirmed");
+
+              } else {
+
+                targetCard.dataset.confirmado = "0";
+
+                statusBadge.innerText = "Não Confirmado";
+                statusBadge.classList.remove("confirmed");
+                statusBadge.classList.add("not-confirmed");
+              }
+
+
+            }
+            confirmBtn.remove();
+          }
+        }
+
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Confirmar Agendamento";
+
         // Cria o HTML personalizado para o SweetAlert2
         const confirmHtml = `
           <div class="appointment-confirm">
@@ -2086,59 +2427,44 @@ function enableAppointmentSelection() {
           </div>
         `;
 
-        // Exibe o SweetAlert2 personalizado
-        Swal.fire({
-          title: 'Confirmar Agendamento',
-          html: confirmHtml,
-          icon: 'question',
-          showCancelButton: true,
-          confirmButtonText: 'Confirmar',
-          cancelButtonText: 'Cancelar',
-          customClass: {
-            confirmButton: 'btn-confirm',
-            cancelButton: 'btn-cancel'
-          },
-          buttonsStyling: false,
-          showLoaderOnConfirm: true,
-          preConfirm: () => {
-            // Preenche os campos na tela de confirmação
-            document.getElementById("confirm-professional").textContent = profissional;
-            document.getElementById("confirm-specialty").textContent = especialidade;
-            document.getElementById("confirm-time").textContent = `${horario} - ${data}`;
-
-            // Retorna os dados para uso posterior se necessário
-            return { profissional, especialidade, horario, data, status };
+        async function confirmarAgendamentoReal(idAtendimento, chaveBeneficiario, appointments) {
+          if (!idAtendimento || !chaveBeneficiario) {
+            console.error("Parâmetros inválidos para confirmação.");
+            return false;
           }
-        }).then((result) => {
-          if (result.isConfirmed) {
-          const logChave = currentChaveBeneficiario || '3386751';
-          console.log('Agendamento confirmado:', {
-            id_atendimento: idAtendimento,
-            chave_beneficiario: logChave
-          });
-          // Mostra o SweetAlert de sucesso
-          Swal.fire({
-            title: 'Sucesso!',
-            text: 'Agendamento confirmado com sucesso!',
-            icon: 'success',
-            confirmButtonText: 'OK',
-            customClass: {
-              confirmButton: 'btn-confirm',
-            },
-            buttonsStyling: false,
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            allowEnterKey: false
-          }).then(() => {
-            // Mantém a tela de confirmação visível para o usuário conferir os dados
-            updateConfirmationScreen();
-            showScreen('confirmation');
 
-            // Garante que o botão principal esteja disponível
-            document.getElementById('confirm-btn')?.focus();
-          });
+          try {
+            const response = await fetch("ajax/confirmar_agendamento_ajax.php", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                id_atendimento: Number(idAtendimento),
+                chave_beneficiario: Number(chaveBeneficiario)
+              })
+            });
+
+            const data = await response.json();
+            console.log("Retorno da API de confirmação:", data);
+
+            if (data.sucesso) {
+              const idx = appointments.findIndex(app => app.id_atendimento === idAtendimento);
+              if (idx !== -1) appointments[idx].isConfirmed = "1";
+            }
+
+            return data;
+          } catch (e) {
+            console.error("Erro API de confirmação:", e);
+            return { sucesso: false, msg: e.message || "Erro na comunicação com a API" };
           }
-        });
+        }
+
+
+
+
+
+
       });
     }
   });
@@ -2163,7 +2489,7 @@ let isModalOpen = false;
 function goToWelcomeScreen() {
   // Impede fechamento se modal (SweetAlert2) estiver aberto
   if (isModalOpen) {
-    console.log("🧠 Modal ativo — aguardando fechamento para voltar.");
+    console.log("🧠Modal ativo — aguardando fechamento para voltar.");
     return;
   }
 
@@ -2333,3 +2659,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+document.addEventListener("click", function (e) {
+    if (e.target.closest("#btn-sair")) {
+        window.location.href = "entrada.php";
+    }
+});
+

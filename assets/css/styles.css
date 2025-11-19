@@ -328,6 +328,16 @@ body.identify-no-scroll {
     background: white;
     border: 2px solid var(--border);
     border-radius: 1rem;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem 1rem;
+    position: relative;
+    transition: all 0.3s ease;
+    width: 100%;
+    height: 100%;
     padding: 2rem 1rem;
     display: flex;
     flex-direction: column;
@@ -349,6 +359,217 @@ body.identify-no-scroll {
 
 .option-btn:active {
     transform: translateY(0);
+}
+
+.option-btn.inativo-card {
+    opacity: 0.45;
+    pointer-events: none;
+    cursor: not-allowed;
+    position: relative;
+}
+
+
+
+/* Removendo o estilo de opacidade que não é mais necessário */
+
+.option-btn.inativo-card .ribbon-container,
+.option-btn.inativo-card .ribbon {
+    opacity: 1 !important;
+    filter: none !important; /* limpa efeitos herdados do pai */
+}
+
+
+
+
+/* Container do botão com posição relativa para a faixa */
+.option-btn-wrapper {
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: 180px;
+    overflow: hidden;
+}
+
+/* Estilo da faixa de manutenção */
+.ribbon-container {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    overflow: visible;
+    z-index: 20;
+    pointer-events: none;
+}
+
+.ribbon {
+    position: absolute;
+    top: 15px;
+    right: -20px;
+    width: 120px;
+    padding: 5px 0;
+    background: #ff5252;
+    color: white;
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transform: rotate(45deg);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    z-index: 11;
+    /* Efeito de fita com clip-path */
+    clip-path: polygon(
+        0 0,
+        90% 0,
+        100% 50%,
+        90% 100%,
+        0 100%,
+        10% 50%
+    );
+    /* Adiciona uma borda branca sutil */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-left: none;
+    border-right: none;
+}
+
+.option-btn .ribbon {
+    position: absolute;
+    top: 15px;
+    right: -40px;
+    color: #fff;
+    padding: 6px 0;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    z-index: 1;
+    width: 160px;
+    text-align: center;
+    overflow: hidden;
+    background: linear-gradient(45deg, #ff5252, #ff6b6b);
+    transform: rotate(45deg);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    border-radius: 0 0 4px 4px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.option-btn .ribbon::before,
+.option-btn .ribbon::after {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    background: #e74c3c;
+    transform: rotate(45deg);
+    z-index: -1;
+    border-radius: 0 0 0 4px;
+}
+
+.option-btn .ribbon::before {
+    top: -7px;
+    left: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.option-btn .ribbon::after {
+    bottom: -7px;
+    right: 15px;
+    transform: rotate(225deg);
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
+}
+
+/* Estilo para o texto EM BREVE fora dos botões */
+.option-btn-inativo {
+    position: relative;
+}
+
+.option-btn-inativo .em-breve-text {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--warning);
+    color: #000;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 10px;
+    z-index: 2;
+    background-color: #ff4444;
+    color: white !important;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    opacity: 1 !important;
+    z-index: 2;
+}
+
+/* Estilo para o contêiner da faixa */
+.ribbon-container {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: none; /* Esconde a faixa original */
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.ribbon {
+    position: absolute;
+    top: 10px;
+    right: -35px;
+    opacity: 1 !important; /* Garante que a faixa fique totalmente visível */
+    width: 140px;
+    padding: 6px 0;
+    background: #ff5252 !important;
+    color: white;
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transform: rotate(45deg);
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    /* Efeito de fita com clip-path */
+    clip-path: polygon(
+        0 0,
+        90% 0,
+        100% 50%,
+        90% 100%,
+        0 100%,
+        10% 50%
+    );
+    /* Adiciona uma borda branca sutil */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-left: none;
+    border-right: none;
+}
+
+/* Adiciona um pequeno detalhe de sombra na parte inferior */
+.ribbon::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.option-btn {
+    position: relative;
 }
 
 .option-btn .icon-container {
@@ -399,9 +620,10 @@ body.identify-no-scroll {
         grid-template-columns: repeat(2, 1fr);
     }
     
-    .option-btn {
+    .option-btn,
+    .option-btn-inativo,
+    .option-btn-wrapper {
         min-height: 160px;
-        padding: 1.5rem 0.75rem;
     }
     
     .option-btn .icon-container {
@@ -416,9 +638,10 @@ body.identify-no-scroll {
         grid-template-columns: 1fr;
     }
     
-    .option-btn {
+    .option-btn,
+    .option-btn-inativo,
+    .option-btn-wrapper {
         min-height: 140px;
-        padding: 1.25rem 0.5rem;
     }
     
     .welcome-content {
@@ -1572,7 +1795,7 @@ position: relative; /* cria contexto para o overlay */
 
 .confirmation-content {
   max-width: 700px; /* reduz a largura geral da seção */
-  margin: 0 auto;
+  margin: 1 auto;
   padding: 2rem 3rem;
   background: #fff;
   border-radius: 1rem;
@@ -1929,6 +2152,49 @@ position: relative; /* cria contexto para o overlay */
   border: 1px solid #eee;
 }
 
+/* Status Badges */
+.appointment-status {
+  display: flex;
+  justify-content: center;
+  margin: 0.5rem 0;
+}
+
+.appointment-status span {
+  padding: 4px 12px !important;
+  font-weight: 600 !important;
+  font-size: 0.9em !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 200px;
+  text-align: center;
+  display: inline-flex !important;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Confirmed Status */
+.appointment-status span[style*="background: #4CAF50"] {
+  background: #4CAF50 !important;
+  color: white !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+
+/* Pending Status */
+.appointment-status span[style*="background: #FFC107"] {
+  background: #F57C00 !important;
+  color: white !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+
+/* Icons */
+.appointment-card i.fa-check-circle,
+.appointment-card i.fa-clock {
+  color: #ffffff !important;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+}
+
 .appointment-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
@@ -1946,6 +2212,9 @@ position: relative; /* cria contexto para o overlay */
   color: #E88C38;
   margin-right: 0.5rem;
   width: 20px;
+  font-size: 1.1em;
+  min-width: 20px;
+  text-align: center;
   text-align: center;
 }
 
@@ -2231,7 +2500,6 @@ position: relative; /* cria contexto para o overlay */
 
 #appointments-list .appointment-details i {
   margin-right: 0.6rem;
-  color: var(--primary-dark);
   width: 20px;
   text-align: center;
 }
@@ -2555,4 +2823,60 @@ position: relative; /* cria contexto para o overlay */
 
 #appointments-list .retry-btn i {
   margin-right: 0.5rem;
+}
+
+
+
+/* --------------------------- */
+
+/* Wrapper precisa assumir o tamanho EXATO do botão */
+.option-btn-wrapper {
+    position: relative;
+    display: block;        /* garante largura total da grid */
+    width: 100%;
+    height: 100%;
+}
+
+/* O botão precisa preencher 100% do wrapper */
+.option-btn-wrapper .option-btn {
+    width: 100%;
+    height: 100%;
+}
+
+/* Ribbon agora posicionada corretamente */
+.fixed-ribbon {
+    position: absolute;
+    top: -5px;       /* corrige posição para dentro do card */
+    right: -5px;
+    z-index: 50;
+    pointer-events: none;
+}
+
+.fixed-ribbon .ribbon {
+    top: 18px !important;   /* antes estava ~10px — agora o texto desce */
+}
+
+#appointments-screen .header-bar {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    padding: 10px 0 !important;
+    margin-bottom: 10px !important;
+}
+
+#appointments-screen .header-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #6A8C5D !important;
+    font-size: 1.2rem !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+#appointments-screen .exit-btn {
+    color: #D9534F !important;
 }
