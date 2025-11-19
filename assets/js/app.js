@@ -2360,7 +2360,9 @@ function enableAppointmentSelection() {
                 // ===========================
                 if (statusCode === "G200") {
 
-                  await Swal.fire({
+                  // Mostra o modal de sucesso, mas não aguardamos o fechamento
+                  // para que o envio para a fila ocorra imediatamente.
+                  Swal.fire({
                     icon: "success",
                     title: "Presença confirmada!",
                     html: `
@@ -2376,8 +2378,46 @@ function enableAppointmentSelection() {
                     allowEscapeKey: false
                   });
 
-
+                  // Continua imediatamente: logs e encaminhamento
                   console.log("🟢 Guia gerada com sucesso:", numeroGuia);
+                  // Envia dados para encaminhar à fila do profissional
+                    try {
+                    const encaminharPayload = {
+                      id_atendimento: Number(idAtendimento),
+                      chave_beneficiario: Number(window.currentChaveBeneficiario),
+                      numero_guia: Number(numeroGuia)
+                    };
+
+                    // Log único e separado com apenas o objeto solicitado
+                    console.log(JSON.stringify(encaminharPayload));
+                    // Disponibiliza no global para inspeção adicional
+                    window.__lastEncaminharPayload = encaminharPayload;
+
+                    console.log("📤 Encaminhando para fila do profissional:", encaminharPayload);
+
+                    const encaminhaResp = await fetch("ajax/encaminha_fila_profissional_ajax.php", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(encaminharPayload)
+                    });
+
+                    let encaminhaJson = null;
+                    try {
+                      // Lê o corpo como texto uma vez e tenta parsear JSON.
+                      const encaminhaText = await encaminhaResp.text();
+                      try {
+                        encaminhaJson = JSON.parse(encaminhaText);
+                        console.log("Retorno encaminhamento fila profissional (JSON):", encaminhaJson);
+                      } catch (parseErr) {
+                        console.warn("Retorno encaminhamento fila profissional (raw):", encaminhaText);
+                      }
+                    } catch (e) {
+                      console.error("Erro ao ler resposta do encaminhamento:", e);
+                    }
+
+                  } catch (errEnc) {
+                    console.error("Erro ao encaminhar para fila do profissional:", errEnc);
+                  }
                   return;
                 }
 
