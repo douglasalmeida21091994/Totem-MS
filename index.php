@@ -313,7 +313,7 @@ function obterHoraAtual()
                         <p><i class="fas fa-user-md detail-icon"></i> <strong id="label-professional">Profissional:</strong> <span id="confirm-professional"></span></p>
                         <p><i class="fas fa-heartbeat detail-icon"></i> <strong>Especialidade:</strong> <span id="confirm-specialty"></span></p>
                         <p><i class="fas fa-clock detail-icon"></i> <strong>Horário:</strong> <span id="confirm-time"></span></p>
-                        <p><i class="fas fa-door-open detail-icon"></i> <strong>Sala:</strong> <span id="confirm-room"></span></p>
+                        <!-- <p><i class="fas fa-door-open detail-icon"></i> <strong>Sala:</strong> <span id="confirm-room"></span></p> -->
                         <!-- <div id="confirmation-status" class="confirmation-status"></div> -->
                     </div>
 

@@ -17,7 +17,7 @@ const confirmPatientNameElement = document.getElementById('confirm-patient-name'
 const confirmServiceTypeElement = document.getElementById('confirm-service-type');
 const confirmProfessionalElement = document.getElementById('confirm-professional');
 const confirmSpecialtyElement = document.getElementById('confirm-specialty');
-const confirmTimeElement = document.getElementById('confirm-time');
+const confirmTimeElement = document.getElementById("confirm-time");
 const confirmRoomElement = document.getElementById('confirm-room');
 const appointmentsList = document.getElementById('appointments-list');
 const cpfInput = document.getElementById('cpf-value');
@@ -758,6 +758,10 @@ function enableTouchAppointmentSelection(appointments) {
 
 // ====================== ATUALIZAÇÃO DA TELA DE CONFIRMAÇÃO ======================
 function updateConfirmationScreen() {
+
+  console.log("🟢 updateConfirmationScreen() recebeu:", selectedAppointment);
+  console.log("🟢 HORÁRIO recebido:", selectedAppointment?.horario);
+
   if (!selectedAppointment) return;
 
   // Dados do paciente e serviço
@@ -766,13 +770,8 @@ function updateConfirmationScreen() {
   if (confirmSpecialtyElement) confirmSpecialtyElement.textContent = selectedAppointment.especialidade || selectedAppointment.nome_especialidade || selectedAppointment.title || '—';
 
   // Formata o horário
-  if ((selectedAppointment.tipo || selectedAppointment.type) === 'Hora Marcada' && selectedAppointment.hora_inicio && selectedAppointment.hora_final) {
-    if (confirmTimeElement) confirmTimeElement.textContent = `${formatTime(selectedAppointment.hora_inicio)} - ${formatTime(selectedAppointment.hora_final)}`;
-  } else {
-    if (confirmTimeElement) confirmTimeElement.textContent = formatTime(selectedAppointment.horario || selectedAppointment.time || selectedAppointment.hora_inicio || '');
-  }
+  if (confirmTimeElement) confirmTimeElement.textContent = selectedAppointment.horario || "";
 
-  if (confirmRoomElement) confirmRoomElement.textContent = selectedAppointment.room || 'A ser definido';
 
   // Atualiza o status de confirmação
   const confirmationStatusElement = document.getElementById('confirmation-status');
@@ -2076,6 +2075,12 @@ function enableAppointmentSelection() {
         // Obtém os dados do agendamento
         const idAtendimento = card.dataset.id;
 
+        const appointment = appointments.find(a => a.id == idAtendimento);
+
+console.log("🟢 APPOINTMENT no clique:", appointment);
+console.log("🟢 HORÁRIO no clique:", appointment?.horario);
+
+
         const profissional = card.querySelector(".professional")?.innerText.replace("Profissional:", "").trim() || "—";
         const especialidadeElement = card.querySelector(".specialty");
         const especialidade = (especialidadeElement ?
@@ -2093,6 +2098,7 @@ function enableAppointmentSelection() {
           horario,
           status
         });
+
 
         // Chave do beneficiário
         const chaveBeneficiario = window.currentChaveBeneficiario || null;
@@ -2131,6 +2137,43 @@ function enableAppointmentSelection() {
             timer: 2500,
             showConfirmButton: false,
 didClose: async () => {
+
+const ap = appointments.find(a => a.id == idAtendimento);
+
+console.log("🟢 HORÁRIO dentro do didClose:", ap?.horario);
+
+
+  // Preencher modal de confirmação
+if (responseJson?.dados_agendamento) {
+
+    // Nome do paciente
+    document.getElementById("confirm-patient-name").textContent =
+        document.getElementById("patient-name").textContent;
+
+    // Serviço
+    document.getElementById("confirm-service-type").textContent =
+        document.getElementById("service-type").textContent || "Consulta";
+
+    // Profissional
+    document.getElementById("confirm-professional").textContent =
+        responseJson.dados_agendamento.nome_profissional || "";
+
+    // Especialidade
+    document.getElementById("confirm-specialty").textContent =
+        responseJson.dados_agendamento.nome_especialidade || "";
+
+    // Horário → você já tem no objeto do card
+    const ap = appointments.find(a => a.id == idAtendimento);
+
+    document.getElementById("confirm-time").textContent = ap?.horario || "";
+
+const roomEl = document.getElementById("confirm-room");
+if (roomEl) {
+    roomEl.textContent = responseJson.dados_agendamento.nome_local_atendimento || "";
+}
+
+}
+
 
   if (!resultado) return;
 
@@ -2177,13 +2220,13 @@ didClose: async () => {
   if (btn) btn.remove();
 
   // Agora sim, modal final (já com card 100% atualizado)
-  await Swal.fire({
-    icon: "success",
-    title: "Sucesso!",
-    text: "Agendamento confirmado!",
-    timer: 2000,
-    showConfirmButton: false
-  });
+  // await Swal.fire({
+  //   icon: "success",
+  //   title: "Sucesso!",
+  //   text: "Agendamento confirmado!",
+  //   timer: 2000,
+  //   showConfirmButton: false
+  // });
 
   // Vai para a tela de confirmação
   showScreen('confirmation');
@@ -2196,6 +2239,8 @@ didClose: async () => {
           if (resultado) {
             if (responseJson && responseJson.dados_agendamento) {
               console.log("Dados do agendamento confirmado:", responseJson.dados_agendamento);
+              console.log("🟡 HORÁRIO vindo do CARD no momento da confirmação:", appointment.horario);
+
             }
             const statusBadge = card.querySelector(".status-badge");
             if (statusBadge) {
