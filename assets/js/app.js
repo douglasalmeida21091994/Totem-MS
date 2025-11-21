@@ -629,7 +629,7 @@ function enableTouchAppointmentSelection(appointments) {
     });
   }
 
-  // Manipula a confirmação do agendamento - VERSÃO CORRIGIDA
+  // Manipula a confirmação do agendamento - VERSÃO COMPLETA ATUALIZADA
   function handleAppointmentConfirmation(card, appointments) {
     const appointmentId = card.dataset.id;
     const appointment = appointments.find(a => a.id === appointmentId);
@@ -695,7 +695,7 @@ function enableTouchAppointmentSelection(appointments) {
           }
         });
 
-        // Função para atualizar o progresso (PARÂMETRO ADICIONADO)
+        // Função para atualizar o progresso
         function updateProgress(message) {
           currentProgress = message;
         }
@@ -706,7 +706,7 @@ function enableTouchAppointmentSelection(appointments) {
             selectedAppointment.id, 
             chave, 
             appointments, 
-            updateProgress // ← PARÂMETRO ADICIONADO AQUI
+            updateProgress
           );
 
           // Finaliza com mensagem de conclusão
@@ -717,8 +717,9 @@ function enableTouchAppointmentSelection(appointments) {
           if (!confirmado.sucesso) {
             await Swal.fire({
               icon: "error",
-              title: "Erro!",
+              title: "Erro na Confirmação",
               text: confirmado.msg || "Não foi possível confirmar o agendamento.",
+              confirmButtonText: "Entendi"
             });
             return;
           }
@@ -736,24 +737,54 @@ function enableTouchAppointmentSelection(appointments) {
             }
           }
 
-          // Modal de sucesso
+          // ✅ MODAL DE SUCESSO COM DUAS OPÇÕES (COM FONT AWESOME)
           await Swal.fire({
-            title: 'Sucesso!',
-            text: 'Agendamento confirmado com sucesso!',
+            title: '<i class="fas fa-check-circle" style="color: #4CAF50; font-size: 1.2em;"></i> Check-in Confirmado!',
+            html: `
+              <div style="text-align: center; padding: 15px;">
+                <p style="font-size: 1.2em; margin-bottom: 20px; color: #2E7D32;">
+                  <i class="fas fa-check-double" style="color: #4CAF50; margin-right: 8px;"></i>
+                  Seu agendamento foi confirmado com sucesso!
+                </p>
+                <p style="color: #666; font-size: 1em; margin-bottom: 25px;">
+                  <i class="fas fa-clock" style="color: #E88C38; margin-right: 8px;"></i>
+                  Você já está na fila para atendimento.
+                </p>
+              </div>
+            `,
             icon: 'success',
-            confirmButtonText: 'OK'
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-calendar-alt"></i> Meus Agendamentos',
+            cancelButtonText: '<i class="fas fa-home"></i> Tela Inicial',
+            confirmButtonColor: '#E88C38',
+            cancelButtonColor: '#6C757D',
+            reverseButtons: true,
+            focusConfirm: false,
+            allowOutsideClick: false,
+            customClass: {
+              confirmButton: 'swal-custom-confirm',
+              cancelButton: 'swal-custom-cancel',
+              popup: 'swal-custom-popup'
+            }
+          }).then((result) => {
+            if (result.isConfirmed) {
+              // Usuário clicou em "Meus Agendamentos" - atualiza lista e volta para agendamentos
+              renderAppointments(patientCPF);
+              showScreen('appointments');
+            } else {
+              // Usuário clicou em "Tela Inicial" ou cancelou - vai para welcome
+              showScreen('welcome');
+              resetForm();
+            }
           });
-
-          updateConfirmationScreen();
-          showScreen('confirmation');
 
         } catch (error) {
           Swal.close();
           await Swal.fire({
             icon: "error",
-            title: "Erro no Processamento",
+            title: '<i class="fas fa-exclamation-triangle"></i> Erro no Processamento',
             text: "Ocorreu um erro durante a confirmação. Tente novamente.",
-            confirmButtonText: "Entendi"
+            confirmButtonText: '<i class="fas fa-check"></i> Entendi'
           });
         }
       }
